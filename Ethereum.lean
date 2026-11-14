@@ -65,3 +65,4 @@ import Ethereum.Weierstrass.Order
 import Ethereum.Weierstrass.Cube
 import Ethereum.BN254.Spec
 import Ethereum.BN254.Proofs
+import Ethereum.BN254.Order
