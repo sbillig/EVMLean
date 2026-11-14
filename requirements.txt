@@ -1,4 +1,3 @@
-coincurve
 typing-extensions
 pycryptodome
 eth-typing

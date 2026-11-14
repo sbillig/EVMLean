@@ -6,7 +6,6 @@ in
 pkgs.mkShell {
   packages = with pkgs; [
     elan
-    python312Packages.coincurve
     python312Packages.typing-extensions
     python312Packages.pycryptodome
     python312Packages.eth-typing

@@ -114,8 +114,9 @@ milliseconds compiled and about a quarter of a second in the kernel.
 
 `ECDSARECOVER` accepts the recovery identifiers 0 and 1 only. `recover.py`
 passed 2 and 3 on to libsecp256k1, which then tries the abscissa `r + n`; no
-caller passes them. `ECDSASIGN` still runs `sign.py`; nothing in the model or
-the conformance runner calls it.
+caller passes them. `ECDSASIGN`, which ran `sign.py` and which nothing called,
+was removed with `recover.py`, so the Python package `coincurve` is no longer
+needed.
 
 ## Checked External Precompile Outputs
 

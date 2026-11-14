@@ -15,7 +15,7 @@ upstream project, see
 [nethermind-changes.md](nethermind-changes.md).
 
 # Requirements
-- Python packages: coincurve, typing-extensions, pycryptodome, eth-typing, py-ecc
+- Python packages: typing-extensions, pycryptodome, eth-typing, py-ecc
 
 # Project structure
 
