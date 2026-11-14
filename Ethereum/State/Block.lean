@@ -350,6 +350,8 @@ def deserializeBlock
           withdrawalsRoot
           (.ofNat <| fromByteArrayBigEndian blobGasUsed)
           (.ofNat <| fromByteArrayBigEndian excessBlobGas)
+          -- Not in the RLP encoding; the blocks EVMLean processes are Cancun's.
+          .Cancun
     | _ =>
       dbg_trace "Block header has wrong RLP structure"
       throw <| .BlockException .RLP_STRUCTURES_ENCODING

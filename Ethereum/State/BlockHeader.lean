@@ -4,6 +4,16 @@ import Ethereum.Wheels
 namespace Ethereum
 
 /--
+The fork whose rules a block follows, which the chain's configuration determines from the block.
+EVMLean implements Cancun; of Osaka it implements only `CLZ` (EIP-7939), an invalid instruction
+in Cancun.
+-/
+inductive Fork where
+  | Cancun
+  | Osaka
+deriving DecidableEq, Inhabited, Repr, BEq
+
+/--
 `BlockHeader`. `H_<x>`. Section 4.3.
 
 `parentHash`    `p`
@@ -24,6 +34,7 @@ namespace Ethereum
 `baseFeePerGas` `f`
 `withdrawalsRoot` (EIP-4895)
 `parentBeaconBlockRoot` (EIP-4877)
+`fork`          the fork of the block, which its RLP encoding does not contain
 -/
 structure BlockHeader where
   parentHash    : UInt256
@@ -47,6 +58,7 @@ structure BlockHeader where
   withdrawalsRoot : ByteArray
   blobGasUsed     : UInt64
   excessBlobGas   : UInt64
+  fork            : Fork := .Cancun
 deriving DecidableEq, Inhabited, Repr, BEq
 
 def prettyDifference (h₁ h₂ : BlockHeader) : String := Id.run do
@@ -71,6 +83,7 @@ def prettyDifference (h₁ h₂ : BlockHeader) : String := Id.run do
   if h₁.withdrawalsRoot != h₂.withdrawalsRoot then result := result ++ "different withdrawalsRoot\n"
   if h₁.blobGasUsed != h₂.blobGasUsed then result := result ++ "different blobGasUsed\n"
   if h₁.excessBlobGas != h₂.excessBlobGas then result := result ++ "different excessBlobGas\n"
+  if h₁.fork != h₂.fork then result := result ++ "different fork\n"
 
   result
 
