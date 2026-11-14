@@ -36,6 +36,13 @@ The semantic function `step`:
 Ethereum/Semantics.lean
 ```
 
+## Forks
+The model follows Cancun, plus Osaka's `CLZ` (EIP-7939). A block header's
+`fork` field (`Ethereum.Fork`, default `Cancun`) says which rules apply: under
+`Cancun`, `0x1e` is an invalid instruction; under `Osaka` it is `CLZ`. RLP
+encodings do not carry the fork, so decoded blocks are Cancun's, as are the
+conformance tests.
+
 ## Cryptographic trust boundaries
 
 Ethereum's Keccak-256 is implemented as transparent Lean in

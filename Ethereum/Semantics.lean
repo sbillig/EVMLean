@@ -422,6 +422,11 @@ def step (gasCost : ℕ) (instr : Operation × Option (UInt256 × Nat))
         execBinOp (flip UInt256.shiftRight) evmStateCharged
       | .SAR =>
         execBinOp UInt256.sar evmStateCharged
+      | .CLZ =>
+        -- EIP-7939 adds `CLZ` in Osaka; before it, `0x1e` is an invalid instruction.
+        if evmStateCharged.executionEnv.header.fork = .Osaka then
+          execUnOp UInt256.clz evmStateCharged
+        else .error .InvalidInstruction
 
       | .KECCAK256 =>
         binaryMachineStateOp' MachineState.keccak256 evmStateCharged

@@ -52,7 +52,7 @@ def Wverylow : List (Operation) := [
     ]
 
 def Wlow : List (Operation) := [
-  .MUL, .DIV, .SDIV, .MOD, .SMOD, .SIGNEXTEND, .SELFBALANCE
+  .MUL, .DIV, .SDIV, .MOD, .SMOD, .SIGNEXTEND, .SELFBALANCE, .CLZ
 ]
 
 def Wmid : List (Operation) := [

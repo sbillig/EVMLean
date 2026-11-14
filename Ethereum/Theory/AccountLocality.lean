@@ -942,6 +942,9 @@ private lemma step_compbit_accountMap_eq
   · have hm := execBinOp_accountMap_eq h; simpa using hm
   · have hm := execBinOp_accountMap_eq h; simpa using hm
   · have hm := execBinOp_accountMap_eq h; simpa using hm
+  · split at h
+    · have hm := execUnOp_accountMap_eq h; simpa using hm
+    · cases h
 
 private lemma step_keccak_accountMap_eq
     {op : Operation.KOp} {gasCost : Nat} {arg : Option (UInt256 × Nat)}
