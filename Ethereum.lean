@@ -61,6 +61,7 @@ import Ethereum.SpongeHash.Keccak256
 import Ethereum.Secp256k1.Impl
 import Ethereum.Secp256k1.Spec
 import Ethereum.Secp256k1.Proofs.Recover
+import Ethereum.Secp256k1.Proofs.Order
 import Ethereum.Weierstrass.Order
 import Ethereum.Weierstrass.Cube
 import Ethereum.BN254.Spec
