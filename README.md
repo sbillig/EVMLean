@@ -69,12 +69,10 @@ formulas, scalar multiplication and their proofs in
 RIPEMD-160 and SHA-256 are transcribed in
 [`Ethereum/RIPEMD160.lean`](Ethereum/RIPEMD160.lean) and
 [`Ethereum/SHA256.lean`](Ethereum/SHA256.lean); each definition is both the
-specification and the implementation. BLAKE2 F is defined in
+specification and the implementation. BLAKE2 F is specified in
 [`Ethereum/BLAKE2.lean`](Ethereum/BLAKE2.lean) as RFC 7693's compression function
-with EIP-152's input format. Compiled code runs the C function
-`blake2compressb64` of `Ethereum/FFI/ffi.c` in its place, through `@[extern]` on
-that definition; that the two agree is trusted, and is checked by test vectors
-and differential tests.
+with EIP-152's input format; a faster implementation of its rounds is proved
+equal to the specification and runs in compiled code through a `@[csimp]` lemma.
 
 The remaining cryptographic precompiles (SNARKV and point evaluation) still use
 external implementations. Their

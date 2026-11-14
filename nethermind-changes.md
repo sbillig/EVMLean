@@ -145,12 +145,16 @@ before `main`.
 constants, so in the logic their results were unspecified. SHA-256 is now a
 transcription of FIPS 180-4 in `Ethereum/SHA256.lean`, which runs about as fast
 as the C library it replaces; the `sha-2` library is no longer built. BLAKE2 F is
-defined in `Ethereum/BLAKE2.lean` (RFC 7693's `F` with a rounds parameter, and
+specified in `Ethereum/BLAKE2.lean` (RFC 7693's `F` with a rounds parameter, and
 EIP-152's input format). The precompile's maximum-rounds test runs `2³² - 1`
-rounds, about three times slower in Lean than in C, so compiled code still runs
-`blake2compressb64` from `Ethereum/FFI/ffi.c`, now through `@[extern]` on the Lean
-definition: the logic sees the definition, and the agreement of the C function
-with it is a trusted assumption. `Ξ_SHA256_eq` and `Ξ_BLAKE2_F_eq`
+rounds, which the specification, on arrays of boxed words, computes about three
+times slower than the C function that ran it before. `roundsFast` keeps the sixteen
+words of the working vector as the scalar fields of one structure, updated in
+place, with each round's permutation written out; `round_eq`, `rounds_eq` and
+`F_eq_Ffast` prove it equal to the specification, and the `@[csimp]` lemma
+`compressInput_eq_fast` makes compiled code run it. It is faster than the C
+function was, so `blake2compressb64` was removed from `Ethereum/FFI/ffi.c`, and
+no C code is trusted for BLAKE2 F. `Ξ_SHA256_eq` and `Ξ_BLAKE2_F_eq`
 (`Ethereum/Theory`) state the precompiles' results. The unused Python wrappers
 `Ethereum/SHA256.lean` (replaced) and `Ethereum/BLAKE2_F.lean` were removed.
 
