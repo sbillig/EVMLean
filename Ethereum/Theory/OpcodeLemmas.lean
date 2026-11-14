@@ -1373,6 +1373,86 @@ theorem step_not : ∀ (s : State),
           · simp [UInt256_ofNat_1]
           · simp [Stack.push]
 
+theorem step_clz : ∀ (s : State),
+  let I_b := s.executionEnv.code
+  decode I_b s.machineState.pc = some (.CLZ, .none)
+  → s.executionEnv.header.fork = .Osaka
+  → Xstep (D_J I_b 0) s =
+      match s.machineState.stack with
+      | a :: t =>
+        if s.machineState.gasAvailable.toNat < GasConstants.Glow then .error .OutOfGass
+        else
+        if s.machineState.stack.length - 1 + 1 > 1024 then .error .StackOverflow
+        else
+        .ok ({s with
+                  machineState.stack := UInt256.clz a :: t,
+                  machineState.gasAvailable := s.machineState.gasAvailable.subNat GasConstants.Glow
+                  machineState.pc := s.machineState.pc + ⟨1⟩
+                  machineState.execLength := s.machineState.execLength + 1
+                  }
+                ,.none)
+      | _ => .error .StackUnderflow
+:= by
+    intros s I_b hclz hfork
+    simp [Xstep, Z, δ, I_b, hclz]
+    match hstack : s.machineState.stack with
+    | [] => simp
+    | a :: t =>
+      have hstacksize' : ¬ t.length + 1 < 1 := by simp
+      simp [hstacksize']
+      simp [memoryExpansionCost, memoryExpansionCost.μᵢ', C'
+        , InstructionGasGroups.Wcopy, InstructionGasGroups.Wextaccount
+        , InstructionGasGroups.Wzero, InstructionGasGroups.Wbase
+        , InstructionGasGroups.Wverylow
+        , InstructionGasGroups.Wverylow.pushInstrsWithoutZero
+        , InstructionGasGroups.Wverylow.dupInstrs
+        , InstructionGasGroups.Wverylow.swapInstrs
+        , InstructionGasGroups.Wlow ]
+      by_cases hgas: (s.machineState.gasAvailable.toNat < GasConstants.Glow)
+      · simp [hgas]
+      · simp [hgas, α, Operation.isCreate]
+        by_cases hoverflow : 1024 < t.length + 1
+        · simp [hoverflow]
+        ·
+          simp [hoverflow]
+          simp [bind, Except.bind]
+          unfold step
+          simp [hfork, Id.run, EVM.execUnOp, Stack.pop, Ethereum.State.replaceStackAndIncrPC]
+          unfold Ethereum.State.incrPC
+          simp
+          apply And.intro
+          · simp [UInt256_ofNat_1]
+          · simp [Stack.push]
+
+/-- Before Osaka, `CLZ` is an invalid instruction: the step fails. -/
+theorem step_clz_cancun : ∀ (s : State),
+  let I_b := s.executionEnv.code
+  decode I_b s.machineState.pc = some (.CLZ, .none)
+  → s.executionEnv.header.fork = .Cancun
+  → ∃ e, Xstep (D_J I_b 0) s = .error e
+:= by
+    intros s I_b hclz hfork
+    simp [Xstep, Z, δ, I_b, hclz]
+    match hstack : s.machineState.stack with
+    | [] => simp
+    | a :: t =>
+      simp [memoryExpansionCost, memoryExpansionCost.μᵢ', C'
+        , InstructionGasGroups.Wcopy, InstructionGasGroups.Wextaccount
+        , InstructionGasGroups.Wzero, InstructionGasGroups.Wbase
+        , InstructionGasGroups.Wverylow
+        , InstructionGasGroups.Wverylow.pushInstrsWithoutZero
+        , InstructionGasGroups.Wverylow.dupInstrs
+        , InstructionGasGroups.Wverylow.swapInstrs
+        , InstructionGasGroups.Wlow ]
+      by_cases hgas: (s.machineState.gasAvailable.toNat < GasConstants.Glow)
+      · simp [hgas]
+      · simp [hgas, α, Operation.isCreate]
+        by_cases hoverflow : 1024 < t.length + 1
+        · simp [hoverflow]
+        · simp [hoverflow, bind, Except.bind]
+          unfold step
+          simp [hfork]
+
 /-
  -   Keccak Operation
  -/

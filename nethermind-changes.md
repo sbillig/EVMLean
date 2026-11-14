@@ -134,6 +134,14 @@ separate exception result.
 This does not remove EVM exceptions generally. Opcode-level exceptional halts
 and the exception result of the opcode loop remain part of the model.
 
+## Osaka's `CLZ`
+
+`CLZ` (EIP-7939, opcode `0x1e`) is decoded, priced (`Glow`) and stepped like the
+other bitwise operations, but `step` executes it only when the block header's
+new `fork` field is `Osaka`; under the default `Cancun` it fails with an invalid
+instruction, so Cancun's behavior is unchanged. The fork rides on the header
+because `Θ`, `Lambda` and `Υ` already pass the header to every nested frame.
+
 ## Added EVM Proof Library
 
 The [`Ethereum/Theory`](Ethereum/Theory/README.md) directory contains the proof

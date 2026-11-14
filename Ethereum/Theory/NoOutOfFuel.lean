@@ -213,6 +213,7 @@ lemma step_no_OutOfFuel {g state} instr :
       cases op <;> intro h <;> simp [step] at h
   | CompBit op =>
       cases op <;> intro h <;> simp [step] at h
+      split at h <;> simp at h
   | Keccak op =>
       cases op
       intro h

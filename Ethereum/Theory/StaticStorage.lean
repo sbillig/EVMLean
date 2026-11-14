@@ -1009,6 +1009,9 @@ lemma static_step_compbit_accountMap_eq
   · simpa using static_execBinOp_accountMap_eq h
   · simpa using static_execBinOp_accountMap_eq h
   · simpa using static_execBinOp_accountMap_eq h
+  · split at h
+    · simpa using static_execUnOp_accountMap_eq h
+    · cases h
 
 lemma static_step_keccak_accountMap_eq
     {op : Operation.KOp} {gasCost : Nat} {arg : Option (UInt256 × Nat)}
