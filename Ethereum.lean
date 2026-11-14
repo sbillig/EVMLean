@@ -17,6 +17,7 @@ import Ethereum.Theory.OpcodeLemmas
 import Ethereum.Theory.ReturnDataBound
 import Ethereum.Theory.AccountLocality
 import Ethereum.Theory.StaticStorage
+import Ethereum.Theory.ECRecover
 
 import Ethereum.SHA256
 import Ethereum.RIP160
@@ -51,3 +52,7 @@ import Ethereum.State.TransactionOps
 import Ethereum.State.TrieRoot
 
 import Ethereum.SpongeHash.Keccak256
+
+import Ethereum.Secp256k1.Impl
+import Ethereum.Secp256k1.Spec
+import Ethereum.Secp256k1.Proofs.Recover

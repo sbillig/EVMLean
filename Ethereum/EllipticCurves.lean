@@ -1,19 +1,12 @@
--- Requires the following python packages: coincurve, typing-extensions
+-- ECDSASIGN requires the following python packages: coincurve, typing-extensions
 
 import Ethereum.Wheels
 import Ethereum.PerformIO
 import Conform.Wheels
 import Ethereum.SpongeHash.Keccak256
+import Ethereum.Secp256k1.Impl
 
 def secp256k1n : ℕ := 115792089237316195423570985008687907852837564279074904382605163141518161494337
-
-def blobECDSARECOVER (e v r s : String) : String :=
-  totallySafePerformIO ∘ IO.Process.run <|
-    pythonCommandOfInput e v r s
-  where pythonCommandOfInput (e v r s : String) : IO.Process.SpawnArgs := {
-    cmd := "python3",
-    args := #["Ethereum/EllipticCurvesPy/recover.py", e, v, r, s]
-  }
 
 def blobSign (e pᵣ : String) : List String :=
   let output := totallySafePerformIO <| IO.Process.run <| pythonCommandOfInput e pᵣ
@@ -33,9 +26,16 @@ def ECDSASIGN (e pᵣ : ByteArray) : Except String (ByteArray × ByteArray × By
   let s ← ByteArray.ofBlob <| padLeft 64 s -- 64 characters means 23
   .ok (v, r, s)
 
+/-- The 64-byte public key `x ‖ y` that signed the hash `e` with signature `(r, s)` and
+recovery identifier `v`, each argument read as a big-endian number. It is computed by
+`Ethereum.Secp256k1.recover`, and `Ethereum.ECDSARECOVER_eq`
+(`Ethereum/Theory/ECRecover.lean`) states it in terms of
+`Ethereum.Secp256k1.Spec.recover`. -/
 def ECDSARECOVER (e v r s : ByteArray) : Except String ByteArray :=
-  match blobECDSARECOVER (toHex e) (toHex v) (toHex r) (toHex s) with
-    | "error" => .error "ECDSARECOVER failed"
-    | s => ByteArray.ofBlob <| padLeft 128 s /- 128 characters means 64 bytes -/
+  match Ethereum.Secp256k1.recover (Ethereum.fromByteArrayBigEndian e)
+      (Ethereum.fromByteArrayBigEndian v) (Ethereum.fromByteArrayBigEndian r)
+      (Ethereum.fromByteArrayBigEndian s) with
+  | some (x, y) => .ok (Ethereum.Secp256k1.toBytes32 x ++ Ethereum.Secp256k1.toBytes32 y)
+  | none => .error "ECDSARECOVER failed"
 
 open Batteries
