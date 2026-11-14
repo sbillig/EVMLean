@@ -29,6 +29,16 @@ private def key₁ : ℕ × ℕ :=
 -- The kernel evaluates the implementation on the same vector.
 example : recover e₁ 1 r₁ s₁ = some key₁ := by decide +kernel
 
+-- The example transaction of EIP-155 (chain 1, `v = 37`, so recovery identifier 0), with
+-- `r` and `s` as minimal big-endian byte strings, as the conformance runner passes them.
+private def e₂ := 0xdaf5a779ae972f972197303d7b574746c7ef83eadac0f2791ad23db92e4c8e53
+private def r₂ := 18515461264373351373200002665853028612451056578545711640558177340181847433846
+private def s₂ := 46948507304638947509940763649030358759909902576025900602547168820602576006531
+
+#guard (ECDSARECOVER (word e₂) ⟨#[0]⟩ (BE r₂) (BE s₂)).toOption.map
+    (fun pk => toHex ((KEC pk).extract 12 32)) ==
+  some "9d8a62f656a8d1615c1294fd71e9cfb3e4855a4f"
+
 -- The other parity gives a different key; `s` above `n / 2` is accepted.
 #guard recover e₁ 0 r₁ s₁ != some key₁ && (recover e₁ 0 r₁ s₁).isSome
 #guard (recover e₁ 0 r₁ (n - s₁)) == some key₁
