@@ -206,4 +206,25 @@ theorem recover_eq (e v r s : ℕ) :
       ← scalar_eq]
     rfl
 
+/-! ## The order of the generator -/
+
+private theorem G_sq : (gy : ZMod p) ^ 2 = (gx : ZMod p) ^ 3 + 7 :=
+  (Spec.nonsingular_iff _ _).mp G_nonsingular
+
+theorem G_toSpec : (⟨gx, gy, 1⟩ : Impl.Point).toSpec = G := affine_toSpec G_sq
+
+/-- `n • G = 0`, by evaluating `n • G` with `Impl.mulAdd` in the kernel. `Spec.recover`
+does not use this; it lets `(n - u) • G` stand for `-(u • G)`. -/
+theorem nsmul_G : n • G = 0 := by
+  have hG := affine_valid G_sq
+  obtain ⟨-, h⟩ := mulAdd_spec hG infinity_valid hG
+    (by rw [infinity_toSpec, add_zero]) 256 n 0 (by decide) (by decide)
+  have hz : (mulAdd ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0).z % p = 0 := by
+    decide +kernel
+  generalize mulAdd ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0 = Q at h hz
+  have hQz : Q.coords 2 = 0 := natCast_eq_zero_iff_mod.mpr hz
+  rw [infinity_toSpec, zero_nsmul, add_zero, G_toSpec, Impl.Point.toSpec,
+    Jacobian.Point.toAffine_of_Z_eq_zero hQz] at h
+  exact h.symm
+
 end Ethereum.Secp256k1
