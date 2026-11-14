@@ -18,9 +18,11 @@ import Ethereum.Theory.ReturnDataBound
 import Ethereum.Theory.AccountLocality
 import Ethereum.Theory.StaticStorage
 import Ethereum.Theory.ECRecover
+import Ethereum.Theory.RIP160
 
 import Ethereum.SHA256
 import Ethereum.RIP160
+import Ethereum.RIPEMD160
 import Ethereum.BN_ADD
 import Ethereum.BN_MUL
 import Ethereum.SNARKV

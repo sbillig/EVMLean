@@ -3106,7 +3106,8 @@ lemma RIP160_ok_output_size {d s : ByteArray} :
     RIP160 d = .ok s → s.size = 32 := by
   intro h
   unfold RIP160 at h
-  exact checkedPrecompileOutput_ok_size h
+  cases h
+  simp [ByteArray.size_append, ByteArray_zeroes_size, Ethereum.RIPEMD160.hash_size]
 
 lemma precompile_RIP160_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :

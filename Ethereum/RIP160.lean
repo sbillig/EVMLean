@@ -1,16 +1,7 @@
-import Ethereum.PerformIO
-import Ethereum.PrecompileOutput
 import Ethereum.Wheels
-import Conform.Wheels
+import Ethereum.RIPEMD160
 
-def blobRIP160 (d : String) : String :=
-  totallySafePerformIO ∘ IO.Process.run <|
-    pythonCommandOfInput d
-  where pythonCommandOfInput (d : String) : IO.Process.SpawnArgs := {
-    cmd := "python3",
-    args := #["Ethereum/EllipticCurvesPy/rip160.py", d]
-  }
-
+/-- The output of the RIPEMD-160 precompile: the 20-byte digest of `d`, left-padded
+with zeros to 32 bytes. -/
 def RIP160 (d : ByteArray) : Except String ByteArray :=
-  Ethereum.checkedPrecompileOutput "RIP160" 32 <|
-    ByteArray.ofBlob <| blobRIP160 (toHex d)
+  .ok (ByteArray.zeroes 12 ++ Ethereum.RIPEMD160.hash d)
