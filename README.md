@@ -66,11 +66,18 @@ states the precompiles' results. Both curves share the field arithmetic, point
 formulas, scalar multiplication and their proofs in
 [`Ethereum/Weierstrass`](Ethereum/Weierstrass).
 
-RIPEMD-160 is transcribed in [`Ethereum/RIPEMD160.lean`](Ethereum/RIPEMD160.lean);
-that definition is both its specification and its implementation.
+RIPEMD-160 and SHA-256 are transcribed in
+[`Ethereum/RIPEMD160.lean`](Ethereum/RIPEMD160.lean) and
+[`Ethereum/SHA256.lean`](Ethereum/SHA256.lean); each definition is both the
+specification and the implementation. BLAKE2 F is defined in
+[`Ethereum/BLAKE2.lean`](Ethereum/BLAKE2.lean) as RFC 7693's compression function
+with EIP-152's input format. Compiled code runs the C function
+`blake2compressb64` of `Ethereum/FFI/ffi.c` in its place, through `@[extern]` on
+that definition; that the two agree is trusted, and is checked by test vectors
+and differential tests.
 
-The other cryptographic precompiles (SHA-256, SNARKV, BLAKE2 F and point
-evaluation) still use external implementations. Their
+The remaining cryptographic precompiles (SNARKV and point evaluation) still use
+external implementations. Their
 Lean wrappers pass successful results through
 [`Ethereum.checkedPrecompileOutput`](Ethereum/PrecompileOutput.lean), which
 rejects outputs whose size does not match the result size prescribed for that
@@ -107,4 +114,4 @@ This repository is based on Nethermind's [EVMYulLean](https://github.com/Netherm
 
 Notable modifications include porting the project to a newer Lean version, stripping the Yul portions, and adapting the remaining EVM model and project structure for proof development. See [NOTICE](NOTICE) for attribution and modification notes.
 
-Some included third-party components carry their own licenses, including `EthereumTests/LICENSE`, `sha2/LICENSE.md`, and `keccak256/LICENSE`.
+Some included third-party components carry their own licenses, including `EthereumTests/LICENSE` and `keccak256/LICENSE`.

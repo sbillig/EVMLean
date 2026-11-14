@@ -139,13 +139,27 @@ As closed terms they were evaluated when the module was initialised, so every
 program linking EVMLean ran `bn_add.py` twice, `bn_mul.py` and `snarkv.py`
 before `main`.
 
+## SHA-256 and BLAKE2 F
+
+`ffi.SHA256` and `ffi.BLAKE2` called C functions through `@[extern]` on `opaque`
+constants, so in the logic their results were unspecified. SHA-256 is now a
+transcription of FIPS 180-4 in `Ethereum/SHA256.lean`, which runs about as fast
+as the C library it replaces; the `sha-2` library is no longer built. BLAKE2 F is
+defined in `Ethereum/BLAKE2.lean` (RFC 7693's `F` with a rounds parameter, and
+EIP-152's input format). The precompile's maximum-rounds test runs `2³² - 1`
+rounds, about three times slower in Lean than in C, so compiled code still runs
+`blake2compressb64` from `Ethereum/FFI/ffi.c`, now through `@[extern]` on the Lean
+definition: the logic sees the definition, and the agreement of the C function
+with it is a trusted assumption. `Ξ_SHA256_eq` and `Ξ_BLAKE2_F_eq`
+(`Ethereum/Theory`) state the precompiles' results. The unused Python wrappers
+`Ethereum/SHA256.lean` (replaced) and `Ethereum/BLAKE2_F.lean` were removed.
+
 ## Checked External Precompile Outputs
 
 The other externally implemented cryptographic precompiles remain opaque. A
 transparent Lean boundary in `Ethereum/PrecompileOutput.lean` now accepts a
 successful external result only when it has the prescribed size. The checks
-cover SHA-256 and SNARKV outputs at 32 bytes, and BLAKE2 F and point evaluation
-at 64 bytes. An external implementation that returns a malformed length is treated
+cover the SNARKV output at 32 bytes and the point evaluation output at 64 bytes. An external implementation that returns a malformed length is treated
 as an error rather than allowing that value into the EVM semantics.
 
 These checks let `Ethereum/Theory/ReturnDataBound.lean` prove its precompile
