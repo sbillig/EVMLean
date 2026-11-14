@@ -58,7 +58,19 @@ The primality of `p` and of the group order `n` is checked by the kernel from
 Pratt certificates. [`Ethereum/Theory/ECRecover.lean`](Ethereum/Theory/ECRecover.lean)
 states the result of the precompile in terms of the specification.
 
-Several other cryptographic precompiles still use external implementations. Their
+The alt_bn128 addition and scalar multiplication precompiles (ECADD and ECMUL)
+are specified in [`Ethereum/BN254/Spec.lean`](Ethereum/BN254/Spec.lean) over
+Mathlib's points of `y² = x³ + 3`, with the point decoding of EIP-196, and
+implemented and proved in the same way; [`Ethereum/Theory/BN254.lean`](Ethereum/Theory/BN254.lean)
+states the precompiles' results. Both curves share the field arithmetic, point
+formulas, scalar multiplication and their proofs in
+[`Ethereum/Weierstrass`](Ethereum/Weierstrass).
+
+RIPEMD-160 is transcribed in [`Ethereum/RIPEMD160.lean`](Ethereum/RIPEMD160.lean);
+that definition is both its specification and its implementation.
+
+The other cryptographic precompiles (SHA-256, SNARKV, BLAKE2 F and point
+evaluation) still use external implementations. Their
 Lean wrappers pass successful results through
 [`Ethereum.checkedPrecompileOutput`](Ethereum/PrecompileOutput.lean), which
 rejects outputs whose size does not match the result size prescribed for that

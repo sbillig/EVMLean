@@ -33,6 +33,10 @@ component.
   precompile `Ξ_ECREC` in terms of the specification of secp256k1 public-key
   recovery in `Ethereum/Secp256k1/Spec.lean`.
 
+- [`RIP160.lean`](RIP160.lean) and [`BN254.lean`](BN254.lean) state the
+  RIPEMD-160, ECADD and ECMUL precompiles in terms of `Ethereum.RIPEMD160.hash`
+  and the specifications in `Ethereum/BN254/Spec.lean`.
+
 - [`AccountLocality.lean`](AccountLocality.lean) develops relations describing
   which changes to an account are consistent with EVM execution and carries
   them through steps, calls, and contract creation. **The intended locality

@@ -118,14 +118,34 @@ caller passes them. `ECDSASIGN`, which ran `sign.py` and which nothing called,
 was removed with `recover.py`, so the Python package `coincurve` is no longer
 needed.
 
+## Pure Lean RIPEMD-160, ECADD and ECMUL
+
+`RIP160`, `BN_ADD` and `BN_MUL` previously ran `rip160.py`, `bn_add.py` and
+`bn_mul.py` through `totallySafePerformIO`, and in the logic returned
+`Inhabited.default`. RIPEMD-160 is now transcribed over 32-bit words in
+`Ethereum/RIPEMD160.lean`. ECADD and ECMUL are specified over Mathlib's points of
+alt_bn128, `y² = x³ + 3` over `ZMod p`, with EIP-196's decoding (coordinates below
+`p`, `(0, 0)` for the point at infinity, the curve equation), in
+`Ethereum/BN254/Spec.lean`, and `Ethereum/BN254/Proofs.lean` proves the
+implementation equal to the specification. The field arithmetic, Jacobian point
+formulas, scalar multiplication and their proofs are shared with secp256k1 in
+`Ethereum/Weierstrass`, with the prime and the curve constant as parameters.
+`Ξ_RIP160_eq`, `Ξ_BN_ADD_eq` and `Ξ_BN_MUL_eq` (`Ethereum/Theory`) state the
+precompiles' results.
+
+Five unused constants in `PrecompiledContracts.lean` (`expmodOutput`,
+`bn_addOutput₀`, `bn_addOutput₁`, `bn_mulOutput`, `snarkvOutput`) were removed.
+As closed terms they were evaluated when the module was initialised, so every
+program linking EVMLean ran `bn_add.py` twice, `bn_mul.py` and `snarkv.py`
+before `main`.
+
 ## Checked External Precompile Outputs
 
 The other externally implemented cryptographic precompiles remain opaque. A
 transparent Lean boundary in `Ethereum/PrecompileOutput.lean` now accepts a
 successful external result only when it has the prescribed size. The checks
-cover SHA-256 and SNARKV outputs at 32 bytes, RIPEMD-160's EVM result at 32
-bytes, and BN addition, BN multiplication, BLAKE2 F, and point evaluation at 64
-bytes. An external implementation that returns a malformed length is treated
+cover SHA-256 and SNARKV outputs at 32 bytes, and BLAKE2 F and point evaluation
+at 64 bytes. An external implementation that returns a malformed length is treated
 as an error rather than allowing that value into the EVM semantics.
 
 These checks let `Ethereum/Theory/ReturnDataBound.lean` prove its precompile
