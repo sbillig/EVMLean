@@ -29,6 +29,10 @@ component.
   proofs require no custom axioms about the output lengths of the external
   implementations.
 
+- [`ECRecover.lean`](ECRecover.lean) states `ECDSARECOVER` and the ECRECOVER
+  precompile `Ξ_ECREC` in terms of the specification of secp256k1 public-key
+  recovery in `Ethereum/Secp256k1/Spec.lean`.
+
 - [`AccountLocality.lean`](AccountLocality.lean) develops relations describing
   which changes to an account are consistent with EVM execution and carries
   them through steps, calls, and contract creation. **The intended locality

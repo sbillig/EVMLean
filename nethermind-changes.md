@@ -89,6 +89,34 @@ by conformance to the EEST.
 The third-party C Keccak source remains in the build configuration for now,
 but no Keccak call reachable from the production EVM semantics uses it.
 
+## Pure Lean secp256k1 Public-Key Recovery
+
+`ECDSARECOVER` previously ran `Ethereum/EllipticCurvesPy/recover.py` through
+`totallySafePerformIO`. Compiled code depended on Python and `coincurve`, and in
+the logic the function returned `Inhabited.default`, so theorems about the
+ECRECOVER precompile were about a precompile that recovers no key.
+
+It is now computed by `Ethereum.Secp256k1.recover` in
+`Ethereum/Secp256k1/Impl.lean`: arithmetic on natural numbers modulo `p`,
+Jacobian coordinates, and one chain of doublings for `u₂ R - u₁ G`. The
+specification in `Ethereum/Secp256k1/Spec.lean` states recovery as
+`r⁻¹ (s R - e G)` over Mathlib's `WeierstrassCurve` points of `y² = x³ + 7` over
+`ZMod p`, and the precompile's output as the Keccak-256 address of that key.
+`Ethereum.Secp256k1.recover_eq` proves that the implementation computes the
+specification for all inputs, in layers: field operations against `ZMod p`,
+point doubling and addition against Mathlib's Jacobian formulas, scalar
+multiplication against `•`, and the square root and parity choice. Mathlib's
+group law needs `ZMod p` to be a field; `p_prime` and `n_prime` are Pratt
+certificates whose modular powers the kernel evaluates. `Ethereum.ECDSARECOVER_eq`
+and `Ethereum.Ξ_ECREC_eq` (`Ethereum/Theory/ECRecover.lean`) restate
+`ECDSARECOVER` and `Ξ_ECREC` in terms of the specification. Recovery takes a few
+milliseconds compiled and about a quarter of a second in the kernel.
+
+`ECDSARECOVER` accepts the recovery identifiers 0 and 1 only. `recover.py`
+passed 2 and 3 on to libsecp256k1, which then tries the abscissa `r + n`; no
+caller passes them. `ECDSASIGN` still runs `sign.py`; nothing in the model or
+the conformance runner calls it.
+
 ## Checked External Precompile Outputs
 
 The other externally implemented cryptographic precompiles remain opaque. A

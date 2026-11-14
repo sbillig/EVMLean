@@ -46,7 +46,19 @@ suffix, multi-block absorption, and a proof that every digest contains exactly
 by the executable EVM semantics. Keccak calls reachable from the semantics
 therefore do not cross an FFI boundary.
 
-Several cryptographic precompiles still use external implementations. Their
+Public-key recovery on secp256k1, `ECDSARECOVER`, is also transparent Lean. It
+is used by the ECRECOVER precompile and by the conformance runner to recover
+transaction senders. The implementation in
+[`Ethereum/Secp256k1/Impl.lean`](Ethereum/Secp256k1/Impl.lean) computes on
+natural numbers in Jacobian coordinates. It is proved equal, for all inputs, to
+the specification in [`Ethereum/Secp256k1/Spec.lean`](Ethereum/Secp256k1/Spec.lean),
+which states recovery over Mathlib's group of points of `y² = x³ + 7` over
+`ZMod p`; the proof is in [`Ethereum/Secp256k1/Proofs`](Ethereum/Secp256k1/Proofs).
+The primality of `p` and of the group order `n` is checked by the kernel from
+Pratt certificates. [`Ethereum/Theory/ECRecover.lean`](Ethereum/Theory/ECRecover.lean)
+states the result of the precompile in terms of the specification.
+
+Several other cryptographic precompiles still use external implementations. Their
 Lean wrappers pass successful results through
 [`Ethereum.checkedPrecompileOutput`](Ethereum/PrecompileOutput.lean), which
 rejects outputs whose size does not match the result size prescribed for that
