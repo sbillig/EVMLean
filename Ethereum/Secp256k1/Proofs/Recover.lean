@@ -25,8 +25,7 @@ theorem val_neg_mod_two {y : ZMod p} (hy : y ≠ 0) : (-y).val % 2 ≠ y.val % 2
 
 /-- Two square roots of the same number with the same parity are equal. -/
 theorem eq_of_sq_eq {y₁ y₂ : ZMod p} (h : y₁ ^ 2 = y₂ ^ 2)
-    (hv : y₁.val % 2 = y₂.val % 2) :
-    y₁ = y₂ := by
+    (hv : y₁.val % 2 = y₂.val % 2) : y₁ = y₂ := by
   rcases sq_eq_sq_iff_eq_or_eq_neg.mp h with h | h
   · exact h
   · by_cases hy : y₂ = 0
@@ -55,12 +54,14 @@ theorem affine_valid {x y : ℕ} (h : (y : ZMod p) ^ 2 = (x : ZMod p) ^ 3 + 7) :
   rw [Impl.Point.Valid, coords_affine, nonsingular_some]
   exact (Spec.nonsingular_iff _ _).mpr h
 
+/-- The affine point `(x, y)` with `Z = 1` stands for the curve point `(x, y)`. -/
 theorem affine_toSpec {x y : ℕ} (h : (y : ZMod p) ^ 2 = (x : ZMod p) ^ 3 + 7) :
     (⟨x, y, 1⟩ : Impl.Point).toSpec = .some _ _ ((Spec.nonsingular_iff _ _).mpr h) := by
   have hv := affine_valid h
   rw [Impl.Point.Valid, coords_affine] at hv
   rw [Impl.Point.toSpec, coords_affine, Jacobian.Point.toAffine_some hv]
 
+/-- `Impl.liftX` returns a valid point, standing for the point `Spec.liftX` specifies. -/
 theorem liftX_spec {x v : ℕ} :
     (∀ R ∈ Impl.liftX x v, R.Valid) ∧
       (Impl.liftX x v).map Impl.Point.toSpec = Spec.liftX x v := by
@@ -152,6 +153,7 @@ theorem negG_toSpec : (⟨gx, p - gy, 1⟩ : Impl.Point).toSpec = -G := by
 
 /-! ## Affine coordinates of the result -/
 
+/-- `toAffine` returns the reduced coordinates of the point that `P` stands for. -/
 theorem toAffine_spec {P : Impl.Point} (hP : P.Valid) :
     P.toAffine = (match P.toSpec with
       | .zero => none
