@@ -13,7 +13,7 @@ Recovery follows SEC 1 v2, §4.1.6, for the recovery identifiers `0` and `1`: th
 key is `r⁻¹ (s R - e G)`, where `R` is the point with abscissa `r` whose ordinate
 has the parity `v`. The scalars `r⁻¹ s` and `r⁻¹ e` are computed in `ZMod n` and
 applied to points as natural numbers, so the definition does not depend on `n`
-being the order of `G`.
+being the order of `G` (which `Ethereum.Secp256k1.card_point` proves).
 -/
 
 namespace Ethereum.Secp256k1.Spec
