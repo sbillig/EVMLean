@@ -1256,10 +1256,10 @@ lemma precompile_BLAKE2_F_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
   unfold Ξ_BLAKE2_F
   by_cases hgas : g.toNat < fromByteArrayBigEndian (I.calldata.extract 0 4)
   · simp [hgas, dbgTrace]
-  · cases hres : ffi.BLAKE2 I.calldata with
-    | ok o =>
+  · cases hres : BLAKE2.precompile I.calldata with
+    | some o =>
         simp [hgas, hres, UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)]
-    | error e =>
+    | none =>
         simp [hgas, hres, dbgTrace]
 
 lemma precompile_PointEval_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)

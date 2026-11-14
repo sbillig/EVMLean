@@ -13,10 +13,9 @@ import Ethereum.RIP160
 import Ethereum.BN_ADD
 import Ethereum.BN_MUL
 import Ethereum.SNARKV
-import Ethereum.BLAKE2_F
+import Ethereum.BLAKE2
 import Ethereum.PointEval
 
-import Ethereum.FFI.ffi
 
 open Ethereum
 
@@ -275,11 +274,10 @@ def Ξ_BLAKE2_F
     dbg_trace "failed"
     (∅, ⟨0⟩, A, .empty)
   else
-    let o := ffi.BLAKE2 d
-    match o with
-      | .ok o => (σ, g - .ofNat gᵣ, A, o)
-      | .error e =>
-        dbg_trace s!"Ξ_BLAKE2_F failed: {e}"
+    match BLAKE2.precompile d with
+      | some o => (σ, g - .ofNat gᵣ, A, o)
+      | none =>
+        dbg_trace "Ξ_BLAKE2_F failed"
         (∅, ⟨0⟩, A, .empty)
 
 def Ξ_PointEval

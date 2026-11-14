@@ -7,7 +7,6 @@ import Ethereum.Wheels
 import Ethereum.State.TrieRoot
 import Ethereum.SpongeHash.Keccak256
 
-import Ethereum.FFI.ffi
 
 namespace Ethereum
 

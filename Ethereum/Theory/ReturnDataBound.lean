@@ -3202,16 +3202,16 @@ lemma precompile_SNARKV_output_size_le_maxReturnDataSizeByGas_or_calldata
     | error e =>
         simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
-lemma ffi_BLAKE2_ok_output_size {d s : ByteArray} :
-    ffi.BLAKE2 d = .ok s → s.size = 64 := by
+lemma BLAKE2_ok_output_size {d s : ByteArray} :
+    BLAKE2.precompile d = some s → s.size = 64 := by
   intro h
-  unfold ffi.BLAKE2 at h
-  by_cases hsize : d.size != 213
-  · simp [hsize, bind, Except.bind] at h
-  · by_cases hflag : ¬d[212]! = 0 ∧ ¬d[212]! = 1
-    · simp [hsize, hflag, pure, Except.pure, bind, Except.bind] at h
-    · simp [hsize, hflag, pure, Except.pure, bind, Except.bind] at h
-      exact checkedPrecompileOutput_ok_size h
+  rw [BLAKE2.precompile_eq] at h
+  by_cases hc : d.size = 213 ∧ d[212]! ≤ 1
+  · rw [if_pos hc] at h
+    rw [← Option.some.inj h]
+    exact BLAKE2.compressInput_size d
+  · rw [if_neg hc] at h
+    exact absurd h (Option.some_ne_none s).symm
 
 lemma precompile_BLAKE2_F_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
@@ -3219,11 +3219,11 @@ lemma precompile_BLAKE2_F_output_size_le_maxReturnDataSizeByGas_or_calldata
   by_cases hgas : g.toNat < fromByteArrayBigEndian (I.calldata.extract 0 4)
   · simp [Ξ_BLAKE2_F, hgas, dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
   · simp [Ξ_BLAKE2_F, hgas]
-    cases hres : ffi.BLAKE2 I.calldata with
-    | ok s =>
-        have hs := ffi_BLAKE2_ok_output_size hres
+    cases hres : BLAKE2.precompile I.calldata with
+    | some s =>
+        have hs := BLAKE2_ok_output_size hres
         simp [hs, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-    | error e =>
+    | none =>
         simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
 lemma PointEval_ok_output_size {d s : ByteArray} :
