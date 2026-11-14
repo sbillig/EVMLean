@@ -1,6 +1,7 @@
 import Mathlib.NumberTheory.LucasPrimality
 import Mathlib.Data.List.Prime
-import Ethereum.Secp256k1.Impl
+import Mathlib.Tactic.NormNum.Prime
+import Ethereum.Weierstrass.Impl
 
 /-!
 Primality certificates checked by the kernel.
@@ -12,7 +13,7 @@ large prime nests further certificates for the large prime factors of
 `m - 1` (a Pratt certificate).
 -/
 
-namespace Ethereum.Secp256k1
+namespace Ethereum.Weierstrass
 
 theorem powModAux_eq (m : ℕ) :
     ∀ fuel a b : ℕ, b < 2 ^ fuel → powModAux m fuel a b = a ^ b % m
@@ -52,4 +53,10 @@ theorem prime_of_lucas (m a : ℕ) (qs : List ℕ) (hm : 1 < m) (hprod : qs.prod
   obtain rfl := (Nat.prime_dvd_prime_iff_eq hq (hqs b hb)).mp hqb
   exact fun h => hd q hb ((natCast_pow_eq_one_iff hm _ _).mp h)
 
-end Ethereum.Secp256k1
+/-- Proves `∀ q ∈ qs, q.Prime` for a list of numerals, by the given lemmas for the
+large primes and by `norm_num` for the others. -/
+macro "prime_factors" "[" ps:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
+  `(tactic| (simp only [List.forall_mem_cons, List.forall_mem_nil, and_true, true_and, $ps,*]
+             <;> norm_num))
+
+end Ethereum.Weierstrass

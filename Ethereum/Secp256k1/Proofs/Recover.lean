@@ -1,16 +1,29 @@
-import Ethereum.Secp256k1.Proofs.MulAdd
+import Ethereum.Secp256k1.Spec
+import Ethereum.Weierstrass.Proofs.MulAdd
 
 /-!
 `Ethereum.Secp256k1.recover` computes `Spec.recover`, for all inputs.
 
 The proof composes the layers below it: the square root and parity choice of
-`Impl.liftX` against `Spec.liftX`, `Impl.mulAdd` against `•`, and the final
-conversion to affine coordinates against Mathlib's `toAffine`.
+`Impl.liftX` against `Spec.liftX`, and the curve-generic layers of
+`Ethereum/Weierstrass/Proofs`: `mulAdd` against `•` and the final conversion to
+affine coordinates against Mathlib's `toAffine`.
 -/
 
 namespace Ethereum.Secp256k1
 
-open Spec WeierstrassCurve WeierstrassCurve.Jacobian Impl
+open Spec WeierstrassCurve WeierstrassCurve.Jacobian Weierstrass
+
+instance : Fact n.Prime := ⟨n_prime⟩
+
+private theorem p_pos : 0 < p := by decide
+
+private theorem three_lt_p : 3 < p := by decide
+
+private theorem two_lt_n : 2 < n := by decide
+
+private theorem seven_ne_zero : (7 : ZMod p) ≠ 0 :=
+  mod_cast Spec.natCast_ne_zero (k := 7) (by norm_num) (by decide)
 
 /-! ## Square roots and parities in `ZMod p` -/
 
@@ -44,35 +57,29 @@ theorem sq_pow_of_isSquare {a y : ZMod p} (hy : y ^ 2 = a) : (a ^ ((p + 1) / 4))
 
 /-! ## Lifting an abscissa -/
 
-private theorem coords_affine (x y : ℕ) :
-    (⟨x, y, 1⟩ : Impl.Point).coords = ![(x : ZMod p), (y : ZMod p), 1] := by
-  simp [Impl.Point.coords]
-
 /-- An affine point with integer coordinates satisfying the equation. -/
 theorem affine_valid {x y : ℕ} (h : (y : ZMod p) ^ 2 = (x : ZMod p) ^ 3 + 7) :
-    (⟨x, y, 1⟩ : Impl.Point).Valid := by
-  rw [Impl.Point.Valid, coords_affine, nonsingular_some]
-  exact (Spec.nonsingular_iff _ _).mpr h
+    (⟨x, y, 1⟩ : Weierstrass.Point).Valid (7 : ZMod p) :=
+  Weierstrass.affine_valid three_lt_p seven_ne_zero h
 
 /-- The affine point `(x, y)` with `Z = 1` stands for the curve point `(x, y)`. -/
 theorem affine_toSpec {x y : ℕ} (h : (y : ZMod p) ^ 2 = (x : ZMod p) ^ 3 + 7) :
-    (⟨x, y, 1⟩ : Impl.Point).toSpec = .some _ _ ((Spec.nonsingular_iff _ _).mpr h) := by
-  have hv := affine_valid h
-  rw [Impl.Point.Valid, coords_affine] at hv
-  rw [Impl.Point.toSpec, coords_affine, Jacobian.Point.toAffine_some hv]
+    (⟨x, y, 1⟩ : Weierstrass.Point).toSpec (7 : ZMod p) =
+      .some _ _ ((Spec.nonsingular_iff _ _).mpr h) :=
+  Weierstrass.affine_toSpec three_lt_p seven_ne_zero h
 
 /-- `Impl.liftX` returns a valid point, standing for the point `Spec.liftX` specifies. -/
 theorem liftX_spec {x v : ℕ} :
-    (∀ R ∈ Impl.liftX x v, R.Valid) ∧
-      (Impl.liftX x v).map Impl.Point.toSpec = Spec.liftX x v := by
+    (∀ R ∈ Impl.liftX x v, R.Valid (7 : ZMod p)) ∧
+      (Impl.liftX x v).map (Weierstrass.Point.toSpec (7 : ZMod p)) = Spec.liftX x v := by
   have hval : ∀ {a : ℕ}, a < p → (a : ZMod p).val = a := ZMod.val_cast_of_lt
   simp only [Impl.liftX, Spec.liftX]
-  generalize hαdef : fadd (fmul (fmul x x) x) 7 = α
+  generalize hαdef : fadd p (fmul p (fmul p x x) x) 7 = α
   have hα : (α : ZMod p) = (x : ZMod p) ^ 3 + 7 := by
     rw [← hαdef]
     simp only [natCast_fadd, natCast_fmul, Nat.cast_ofNat]
     ring
-  have hαp : α < p := hαdef ▸ fadd_lt _ _
+  have hαp : α < p := hαdef ▸ fadd_lt p_pos _ _
   generalize hβdef : powMod α ((p + 1) / 4) p = β
   have hβp : β < p := by
     rw [← hβdef, powMod_eq]
@@ -134,8 +141,8 @@ theorem liftX_spec {x v : ℕ} :
     have hβsq : (β : ZMod p) ^ 2 = α := by
       rw [← hβdef, natCast_powMod]
       exact sq_pow_of_isSquare hcx
-    have hyy : fmul y y = α :=
-      (natCast_inj (fmul_lt _ _) hαp).mp (by rw [natCast_fmul, ← pow_two, hysq, hβsq])
+    have hyy : fmul p y y = α :=
+      (natCast_inj (fmul_lt p_pos _ _) hαp).mp (by rw [natCast_fmul, ← pow_two, hysq, hβsq])
     exact hpar (fun h => hc ⟨hyy, h⟩) c (hcx.trans hβsq.symm) hcv
   · exact ⟨fun _ h => (nomatch h), rfl⟩
 
@@ -147,33 +154,11 @@ private theorem negG_sq : ((p - gy : ℕ) : ZMod p) ^ 2 = (gx : ZMod p) ^ 3 + 7 
   rw [Nat.cast_sub gy_le, ZMod.natCast_self, zero_sub, neg_sq]
   exact (Spec.nonsingular_iff _ _).mp G_nonsingular
 
-theorem negG_toSpec : (⟨gx, p - gy, 1⟩ : Impl.Point).toSpec = -G := by
+theorem negG_toSpec : (⟨gx, p - gy, 1⟩ : Weierstrass.Point).toSpec (7 : ZMod p) = -G := by
   rw [affine_toSpec negG_sq, G, Affine.Point.neg_some, Affine.Point.some.injEq]
   simp [Nat.cast_sub gy_le, WeierstrassCurve.Affine.negY]
 
 /-! ## Affine coordinates of the result -/
-
-/-- `toAffine` returns the reduced coordinates of the point that `P` stands for. -/
-theorem toAffine_spec {P : Impl.Point} (hP : P.Valid) :
-    P.toAffine = (match P.toSpec with
-      | .zero => none
-      | .some x y _ => some (x, y)).map fun q : ZMod p × ZMod p => (q.1.val, q.2.val) := by
-  unfold Impl.Point.toAffine
-  split_ifs with hz
-  · rw [Impl.Point.toSpec, Jacobian.Point.toAffine_of_Z_eq_zero (natCast_eq_zero_iff_mod.mpr hz)]
-    rfl
-  · have hz' : P.coords 2 ≠ 0 := fun h => hz (natCast_eq_zero_iff_mod.mp h)
-    rw [Impl.Point.toSpec, Jacobian.Point.toAffine_of_Z_ne_zero hP hz']
-    simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq]
-    constructor
-    · rw [← ZMod.val_cast_of_lt (fmul_lt _ _)]
-      refine congrArg ZMod.val ?_
-      rw [natCast_fmul, natCast_fmul, natCast_finv, coords_zero, coords_two]
-      ring
-    · rw [← ZMod.val_cast_of_lt (fmul_lt _ _)]
-      refine congrArg ZMod.val ?_
-      rw [natCast_fmul, natCast_fmul, natCast_fmul, natCast_finv, coords_one, coords_two]
-      ring
 
 /-! ## Recovery -/
 
@@ -197,35 +182,36 @@ theorem recover_eq (e v r s : ℕ) :
     rfl
   · rw [hR, Option.map_some] at hspec
     rw [← hspec]
-    have hRv : R.Valid := hvalid R (by rw [hR]; rfl)
-    have hGv : (⟨gx, p - gy, 1⟩ : Impl.Point).Valid := affine_valid negG_sq
+    have hRv : R.Valid (7 : ZMod p) := hvalid R (by rw [hR]; rfl)
+    have hGv : (⟨gx, p - gy, 1⟩ : Weierstrass.Point).Valid (7 : ZMod p) := affine_valid negG_sq
     have hlt : ∀ t, powMod r (n - 2) n * t % n < 2 ^ 256 :=
       fun t => (Nat.mod_lt _ (by decide)).trans (by decide)
     obtain ⟨hQv, hQ⟩ := mulAdd_spec hRv hGv (hRv.add hGv) (toSpec_add hRv hGv) 256 _ _
       (hlt s) (hlt e)
     simp only
-    rw [toAffine_spec hQv, hQ, negG_toSpec, neg_nsmul, ← sub_eq_add_neg, ← scalar_eq,
+    rw [toAffine_spec (by decide) hQv, hQ, negG_toSpec, neg_nsmul, ← sub_eq_add_neg, ← scalar_eq,
       ← scalar_eq]
-    rfl
+    split <;> split <;> simp_all
 
 /-! ## The order of the generator -/
 
 private theorem G_sq : (gy : ZMod p) ^ 2 = (gx : ZMod p) ^ 3 + 7 :=
   (Spec.nonsingular_iff _ _).mp G_nonsingular
 
-theorem G_toSpec : (⟨gx, gy, 1⟩ : Impl.Point).toSpec = G := affine_toSpec G_sq
+theorem G_toSpec : (⟨gx, gy, 1⟩ : Weierstrass.Point).toSpec (7 : ZMod p) = G :=
+  affine_toSpec G_sq
 
-/-- `n • G = 0`, by evaluating `n • G` with `Impl.mulAdd` in the kernel. `Spec.recover`
+/-- `n • G = 0`, by evaluating `n • G` with `mulAdd` in the kernel. `Spec.recover`
 does not use this; it lets `(n - u) • G` stand for `-(u • G)`. -/
 theorem nsmul_G : n • G = 0 := by
   have hG := affine_valid G_sq
   obtain ⟨-, h⟩ := mulAdd_spec hG infinity_valid hG
     (by rw [infinity_toSpec, add_zero]) 256 n 0 (by decide) (by decide)
-  have hz : (mulAdd ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0).z % p = 0 := by
+  have hz : (mulAdd p ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0).z % p = 0 := by
     decide +kernel
-  generalize mulAdd ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0 = Q at h hz
-  have hQz : Q.coords 2 = 0 := natCast_eq_zero_iff_mod.mpr hz
-  rw [infinity_toSpec, zero_nsmul, add_zero, G_toSpec, Impl.Point.toSpec,
+  generalize mulAdd p ⟨gx, gy, 1⟩ .infinity ⟨gx, gy, 1⟩ 256 n 0 = Q at h hz
+  have hQz : Q.coords p 2 = 0 := natCast_eq_zero_iff_mod.mpr hz
+  rw [infinity_toSpec, zero_nsmul, add_zero, G_toSpec, Weierstrass.Point.toSpec,
     Jacobian.Point.toAffine_of_Z_eq_zero hQz] at h
   exact h.symm
 

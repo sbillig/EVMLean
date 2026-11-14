@@ -1,5 +1,5 @@
-import Ethereum.Secp256k1.Lucas
-import Mathlib.Tactic.NormNum.Prime
+import Ethereum.Weierstrass.Lucas
+import Ethereum.Secp256k1.Impl
 
 /-!
 The primality of secp256k1's field prime `p` and group order `n`.
@@ -15,11 +15,7 @@ every product and power.
 
 namespace Ethereum.Secp256k1
 
-/-- Proves `∀ q ∈ qs, q.Prime` for a list of numerals, by the given lemmas for the
-large primes and by `norm_num` for the others. -/
-local macro "prime_factors" "[" ps:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
-  `(tactic| (simp only [List.forall_mem_cons, List.forall_mem_nil, and_true, true_and, $ps,*]
-             <;> norm_num))
+open Weierstrass
 
 private theorem prime_120233 : Nat.Prime 120233 :=
   prime_of_lucas 120233 3 [2, 2, 2, 7, 19, 113]

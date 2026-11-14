@@ -1,4 +1,4 @@
-import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
+import Ethereum.Weierstrass.Curve
 import Ethereum.Secp256k1.Prime
 import Ethereum.UInt256
 import Ethereum.Wheels
@@ -23,30 +23,19 @@ instance : Fact p.Prime := ⟨p_prime⟩
 instance : NeZero n := ⟨by decide⟩
 
 /-- secp256k1: `y² = x³ + 7` over the integers modulo `p` (SEC 2 v2, §2.4.1). -/
-def curve : WeierstrassCurve (ZMod p) := { a₁ := 0, a₂ := 0, a₃ := 0, a₄ := 0, a₆ := 7 }
+abbrev curve : WeierstrassCurve (ZMod p) := Weierstrass.short p 7
 
 /-- The points of the curve with Mathlib's group law; `0` is the point at infinity. -/
 abbrev Point := curve.toAffine.Point
 
 /-- `p` does not divide `0 < k < p`. -/
-theorem natCast_ne_zero {k : ℕ} (h0 : 0 < k) (hp : k < p) : (k : ZMod p) ≠ 0 := by
-  rw [ne_eq, ZMod.natCast_eq_zero_iff]
-  exact fun h => absurd (Nat.le_of_dvd h0 h) (by omega)
+theorem natCast_ne_zero {k : ℕ} (h0 : 0 < k) (hp : k < p) : (k : ZMod p) ≠ 0 :=
+  Weierstrass.natCast_ne_zero h0 hp
 
 /-- On this curve, every solution of the equation is a nonsingular point. -/
-theorem nonsingular_iff (x y : ZMod p) : curve.toAffine.Nonsingular x y ↔ y ^ 2 = x ^ 3 + 7 := by
-  rw [WeierstrassCurve.Affine.nonsingular_iff', WeierstrassCurve.Affine.equation_iff]
-  simp only [curve, zero_mul, add_zero, mul_zero, zero_sub, ne_eq, neg_eq_zero]
-  refine ⟨And.left, fun h => ⟨h, ?_⟩⟩
-  by_contra! hc
-  have h3 : (3 : ZMod p) ≠ 0 := mod_cast natCast_ne_zero (k := 3) (by norm_num) (by decide)
-  have h2 : (2 : ZMod p) ≠ 0 := mod_cast natCast_ne_zero (k := 2) (by norm_num) (by decide)
-  have h7 : (7 : ZMod p) ≠ 0 := mod_cast natCast_ne_zero (k := 7) (by norm_num) (by decide)
-  have hx : x = 0 := pow_eq_zero_iff (n := 2) (by norm_num) |>.mp
-    ((mul_eq_zero.mp hc.1).resolve_left h3)
-  have hy : y = 0 := (mul_eq_zero.mp hc.2).resolve_left h2
-  simp [hx, hy] at h
-  exact h7 h.symm
+theorem nonsingular_iff (x y : ZMod p) : curve.toAffine.Nonsingular x y ↔ y ^ 2 = x ^ 3 + 7 :=
+  Weierstrass.nonsingular_iff (by decide)
+    (mod_cast natCast_ne_zero (k := 7) (by norm_num) (by decide)) x y
 
 theorem G_nonsingular : curve.toAffine.Nonsingular (gx : ZMod p) gy := by
   rw [nonsingular_iff]
@@ -83,7 +72,8 @@ noncomputable def recover (e v r s : ℕ) : Option (ZMod p × ZMod p) :=
   else none
 
 /-- The 64-byte public key `x ‖ y`, each coordinate big-endian. -/
-def publicKeyBytes (x y : ZMod p) : ByteArray := toBytes32 x.val ++ toBytes32 y.val
+def publicKeyBytes (x y : ZMod p) : ByteArray :=
+  Weierstrass.toBytes32 x.val ++ Weierstrass.toBytes32 y.val
 
 /-- The output of the ECRECOVER precompile (address `0x01`) on the call data `d`, when
 the call has at least the 3000 gas it costs. The input is read as four 32-byte

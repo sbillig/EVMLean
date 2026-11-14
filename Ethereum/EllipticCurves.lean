@@ -13,7 +13,7 @@ def ECDSARECOVER (e v r s : ByteArray) : Except String ByteArray :=
   match Ethereum.Secp256k1.recover (Ethereum.fromByteArrayBigEndian e)
       (Ethereum.fromByteArrayBigEndian v) (Ethereum.fromByteArrayBigEndian r)
       (Ethereum.fromByteArrayBigEndian s) with
-  | some (x, y) => .ok (Ethereum.Secp256k1.toBytes32 x ++ Ethereum.Secp256k1.toBytes32 y)
+  | some (x, y) => .ok (Ethereum.Weierstrass.toBytes32 x ++ Ethereum.Weierstrass.toBytes32 y)
   | none => .error "ECDSARECOVER failed"
 
 open Batteries

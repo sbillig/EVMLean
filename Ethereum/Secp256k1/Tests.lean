@@ -10,7 +10,7 @@ namespace Ethereum.Secp256k1Tests
 
 open Secp256k1
 
-private def word (n : ℕ) : ByteArray := toBytes32 n
+private def word (n : ℕ) : ByteArray := Weierstrass.toBytes32 n
 
 -- go-ethereum's `core/vm/testdata/precompiles/ecRecover.json`, "ValidKey".
 private def e₁ := 0x456e9aea5e197a1f1af7a3e85a3212fa4049a3ba34c2289b4c860fc0b0c64ef3
