@@ -20,6 +20,7 @@ import Ethereum.Theory.StaticStorage
 import Ethereum.Theory.ECRecover
 import Ethereum.Theory.RIP160
 import Ethereum.Theory.BN254
+import Ethereum.Theory.SHA256
 
 import Ethereum.SHA256
 import Ethereum.RIP160

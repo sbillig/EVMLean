@@ -69,13 +69,7 @@ def Ξ_SHA256
   if g.toNat < gᵣ then
     (∅, ⟨0⟩, A, .empty)
   else
-    let o :=
-      match ffi.SHA256 I.calldata with
-        | .ok s => s
-        | .error e =>
-          dbg_trace s!"Ξ_SHA56 failed: {e}"
-          .empty
-    (σ, g - .ofNat gᵣ, A, o)
+    (σ, g - .ofNat gᵣ, A, SHA256.hash I.calldata)
 
 def Ξ_RIP160
   (σ : AccountMap)

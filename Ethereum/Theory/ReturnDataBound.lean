@@ -3083,24 +3083,12 @@ lemma precompile_ECREC_output_size_le_maxReturnDataSizeByGas_or_calldata
         omega
       · simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
-lemma ffi_SHA256_ok_output_size {d s : ByteArray} :
-    ffi.SHA256 d = .ok s → s.size = 32 := by
-  intro h
-  unfold ffi.SHA256 at h
-  exact checkedPrecompileOutput_ok_size h
-
 lemma precompile_SHA256_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
     (Ξ_SHA256 σ g A I).2.2.2.size ≤ max maxReturnDataSizeByGas I.calldata.size := by
   by_cases hgas : g.toNat < 60 + 12 * ((I.calldata.size + 31) / 32)
   · simp [Ξ_SHA256, hgas, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-  · simp [Ξ_SHA256, hgas]
-    cases hres : ffi.SHA256 I.calldata with
-    | ok s =>
-        have hs := ffi_SHA256_ok_output_size hres
-        simp [hs, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-    | error e =>
-        simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+  · simp [Ξ_SHA256, hgas, SHA256.hash_size, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
 lemma RIP160_ok_output_size {d s : ByteArray} :
     RIP160 d = .ok s → s.size = 32 := by

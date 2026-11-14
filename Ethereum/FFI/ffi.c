@@ -1,25 +1,15 @@
 #include <stdint.h>
 #include "lean/lean.h"
-#include "sha-256.h"
 #include <stdio.h>
-#include <stdbool.h> 
+#include <stdbool.h>
+#include <string.h>
 #include "sha3.h"
 
-#define SHA256_OUTPUT_SIZE 32
 #define KECCAK256_OUTPUT_SIZE 32
 
 // #define BLAKE2B_OUTPUT_SIZE 64
 #define BLAKE2B_COMPRESS_SIZE 8
 #define BLAKE2B_KEY_LENGTH    8
-
-extern lean_obj_res sha256(b_lean_obj_arg input, size_t len) {
-  uint8_t hash[SHA256_OUTPUT_SIZE];
-  calc_sha_256(hash, lean_sarray_cptr(input), len);
-  lean_obj_res res = lean_mk_empty_byte_array(lean_box(SHA256_OUTPUT_SIZE));
-  for (int i = 0; i < SHA256_OUTPUT_SIZE; ++i)
-    lean_byte_array_push(res, hash[i]);
-  return res;
-}
 
 // Implementation based on https://github.com/BLAKE2/BLAKE2/
 // with # of rounds parameterised from 12 (BLAKE2) to k < 2^32.

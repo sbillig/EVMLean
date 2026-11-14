@@ -2,13 +2,6 @@ import Ethereum.PrecompileOutput
 
 namespace ffi
 
-@[extern "sha256"]
-opaque sha256 (input : @& ByteArray) (len : USize) : ByteArray
-
-def SHA256 (d : ByteArray) : Except String ByteArray :=
-  Ethereum.checkedPrecompileOutput "SHA256" 32 <|
-    .ok (sha256 d d.size.toUSize)
-
 @[extern "blake2compressb64"]
 opaque BLAKE2Compress (input : @& ByteArray) : ByteArray
 

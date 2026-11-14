@@ -1163,8 +1163,7 @@ lemma precompile_SHA256_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
   unfold Ξ_SHA256
   by_cases hgas : g.toNat < 60 + 12 * ((I.calldata.size + 31) / 32)
   · simp [hgas]
-  · cases ffi.SHA256 I.calldata <;>
-      simp [hgas, UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)]
+  · simp [hgas, UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)]
 
 lemma precompile_RIP160_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_RIP160 σ g A I).2.1.toNat ≤ g.toNat := by
