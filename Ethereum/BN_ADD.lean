@@ -1,18 +1,12 @@
-import Ethereum.Wheels
-import Ethereum.PerformIO
-import Ethereum.PrecompileOutput
-import Conform.Wheels
+import Ethereum.UInt256
+import Ethereum.BN254.Impl
 
-def blobBN_ADD (x₀ y₀ x₁ y₁ : String) : String :=
-  totallySafePerformIO ∘ IO.Process.run <|
-    pythonCommandOfInput x₀ y₀ x₁ y₁
-  where pythonCommandOfInput (x₀ y₀ x₁ y₁ : String) : IO.Process.SpawnArgs := {
-    cmd := "python3",
-    args := #["Ethereum/EllipticCurvesPy/bn_add.py", x₀, y₀, x₁, y₁]
-  }
-
+/-- The output of the ECADD precompile on the coordinates `x₀, y₀, x₁, y₁`, each read as a
+big-endian number. `Ethereum.Ξ_BN_ADD_eq` (`Ethereum/Theory/BN254.lean`) states it in
+terms of `Ethereum.BN254.Spec.add`. -/
 def BN_ADD (x₀ y₀ x₁ y₁ : ByteArray) : Except String ByteArray :=
-  Ethereum.checkedPrecompileOutput "BN_ADD" 64 <| match
-      blobBN_ADD (toHex x₀) (toHex y₀) (toHex x₁) (toHex y₁) with
-    | "error" => .error "BN_ADD failed"
-    | s => ByteArray.ofBlob s
+  match Ethereum.BN254.add (Ethereum.fromByteArrayBigEndian x₀)
+      (Ethereum.fromByteArrayBigEndian y₀) (Ethereum.fromByteArrayBigEndian x₁)
+      (Ethereum.fromByteArrayBigEndian y₁) with
+  | some o => .ok o
+  | none => .error "BN_ADD failed"

@@ -1,18 +1,11 @@
-import Ethereum.Wheels
-import Ethereum.PerformIO
-import Ethereum.PrecompileOutput
-import Conform.Wheels
+import Ethereum.UInt256
+import Ethereum.BN254.Impl
 
-def blobBN_MUL (x₀ y₀ n : String) : String :=
-  totallySafePerformIO ∘ IO.Process.run <|
-    pythonCommandOfInput x₀ y₀ n
-  where pythonCommandOfInput (x₀ y₀ n : String) : IO.Process.SpawnArgs := {
-    cmd := "python3",
-    args := #["Ethereum/EllipticCurvesPy/bn_mul.py", x₀, y₀, n]
-  }
-
+/-- The output of the ECMUL precompile on the coordinates `x₀, y₀` and the scalar `n`,
+each read as a big-endian number. `Ethereum.Ξ_BN_MUL_eq` (`Ethereum/Theory/BN254.lean`)
+states it in terms of `Ethereum.BN254.Spec.mul`. -/
 def BN_MUL (x₀ y₀ n : ByteArray) : Except String ByteArray :=
-  Ethereum.checkedPrecompileOutput "BN_MUL" 64 <| match
-      blobBN_MUL (toHex x₀) (toHex y₀) (toHex n) with
-    | "error" => .error "BN_MUL failed"
-    | s => ByteArray.ofBlob s
+  match Ethereum.BN254.mul (Ethereum.fromByteArrayBigEndian x₀)
+      (Ethereum.fromByteArrayBigEndian y₀) (Ethereum.fromByteArrayBigEndian n) with
+  | some o => .ok o
+  | none => .error "BN_MUL failed"

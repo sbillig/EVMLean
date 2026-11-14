@@ -3153,7 +3153,10 @@ lemma BN_ADD_ok_output_size {x₀ y₀ x₁ y₁ s : ByteArray} :
     BN_ADD x₀ y₀ x₁ y₁ = .ok s → s.size = 64 := by
   intro h
   unfold BN_ADD at h
-  exact checkedPrecompileOutput_ok_size h
+  split at h
+  · cases h
+    exact Ethereum.BN254.add_size (by assumption)
+  · cases h
 
 lemma precompile_BN_ADD_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
@@ -3173,7 +3176,10 @@ lemma BN_MUL_ok_output_size {x₀ y₀ n s : ByteArray} :
     BN_MUL x₀ y₀ n = .ok s → s.size = 64 := by
   intro h
   unfold BN_MUL at h
-  exact checkedPrecompileOutput_ok_size h
+  split at h
+  · cases h
+    exact Ethereum.BN254.mul_size (by assumption)
+  · cases h
 
 lemma precompile_BN_MUL_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
