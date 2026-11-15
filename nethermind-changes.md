@@ -158,6 +158,21 @@ no C code is trusted for BLAKE2 F. `Ξ_SHA256_eq` and `Ξ_BLAKE2_F_eq`
 (`Ethereum/Theory`) state the precompiles' results. The unused Python wrappers
 `Ethereum/SHA256.lean` (replaced) and `Ethereum/BLAKE2_F.lean` were removed.
 
+## MODEXP with bases wider than 32 bytes
+
+`Ξ_EXPMOD` read the base as a natural number of `base_length` bytes and then passed it to
+`expMod` as a `UInt256`, which reduced it modulo `2 ^ 256`. For a base of more than 32 bytes
+with a value of at least `2 ^ 256` the result was `(base mod 2 ^ 256) ^ exponent mod modulus`,
+not `base ^ exponent mod modulus`: 23 of go-ethereum's 47 `modexp_eip2565` vectors, those with
+bases of 40 to 1,024 bytes, came out wrong. The Cancun conformance suite did not show it: its
+calls with such a base have a zero modulus, or a result that the reduction does not change.
+`expMod` now takes the base as a natural number, reduced modulo the modulus. The
+specification (`Ethereum/Modexp/Spec.lean`) states EIP-198's input format and result and
+EIP-2565's pricing, which was already right, and `Ξ_EXPMOD_eq` (`Ethereum/Theory/Modexp.lean`)
+proves the precompile equal to it. `Ethereum/ModexpTests.lean` checks go-ethereum's vectors
+(gas and output), and `Ethereum/ModexpDiff.py` compares the precompile with Python's `pow` on
+generated inputs.
+
 ## Checked External Precompile Outputs
 
 The other externally implemented cryptographic precompiles remain opaque. A
