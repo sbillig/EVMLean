@@ -31,7 +31,7 @@ private theorem p_odd : p % 2 = 1 := by decide
 
 /-- A nonzero element and its negative have different parities, `p` being odd. -/
 theorem val_neg_mod_two {y : ZMod p} (hy : y ≠ 0) : (-y).val % 2 ≠ y.val % 2 := by
-  rw [ZMod.neg_val, if_neg hy]
+  rw [ZMod.neg_val, ite_eq_right hy]
   have := ZMod.val_lt y
   have := p_odd
   omega
@@ -102,8 +102,8 @@ theorem liftX_spec {x v : ℕ} :
   -- If `y` has the wrong parity, so do `β` and `-β`.
   have hpar : y % 2 ≠ v → ∀ c : ZMod p, c ^ 2 = (β : ZMod p) ^ 2 → c.val % 2 ≠ v := by
     intro hyv c hc hcv
-    have hβv : β % 2 ≠ v := fun h => hyv (by rw [← hy, if_pos h]; exact h)
-    have hy' : y = (p - β) % p := by rw [← hy, if_neg hβv]
+    have hβv : β % 2 ≠ v := fun h => hyv (by rw [← hy, ite_eq_left h]; exact h)
+    have hy' : y = (p - β) % p := by rw [← hy, ite_eq_right hβv]
     rcases sq_eq_sq_iff_eq_or_eq_neg.mp hc with rfl | rfl
     · exact hβv (by rwa [hval hβp] at hcv)
     · by_cases hβ0 : β = 0
@@ -111,7 +111,7 @@ theorem liftX_spec {x v : ℕ} :
         exact hyv (by rw [hy', hβ0, Nat.sub_zero, Nat.mod_self]; exact hcv)
       · have hne : (β : ZMod p) ≠ 0 := by
           rwa [ne_eq, ← Nat.cast_zero, natCast_inj hβp p_pos]
-        rw [ZMod.neg_val, if_neg hne, hval hβp] at hcv
+        rw [ZMod.neg_val, ite_eq_right hne, hval hβp] at hcv
         exact hyv (by rw [hy', Nat.mod_eq_of_lt (a := p - β) (b := p) (by omega)]; exact hcv)
   split_ifs with hc hex hex
   -- `y` is a root of parity `v`: both sides are the point `(x, y)`.

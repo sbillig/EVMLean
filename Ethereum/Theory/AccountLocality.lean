@@ -1,6 +1,6 @@
 import Ethereum.Semantics
 import Ethereum.Wheels
-import Batteries.Data.RBMap.Lemmas
+import Batteries.Recycling.RBTree.Lemmas
 
 /-!
 # Account locality
@@ -227,18 +227,18 @@ def account_dead (σ : AccountMap) (a : AccountAddress) : Prop :=
   | some acc => acc.nonce = ⟨0⟩ ∧ acc.code.size = 0 ∧ (acc.storage == default) = true
 
 inductive account_change_consistent (acc : AccountAddress) : AccountMap → AccountMap → Prop where
-  | unchanged {σ σ'}:
+  | unchanged {σ σ' : AccountMap} :
     unchanged acc σ σ'
     → account_change_consistent acc σ σ'
 
-  | init_dead {σ σ'}:
+  | init_dead {σ σ' : AccountMap} :
     account_dead σ acc
     → account_change_consistent acc σ σ'
 
-  | call_prelude {σ r s v z}:
+  | call_prelude {σ : AccountMap} {r s : AccountAddress} {v : UInt256} {z : Bool} :
     account_change_consistent acc σ (sendEth r s v z σ)
 
-  | create_prelude {σ a s v z}:
+  | create_prelude {σ : AccountMap} {a s : AccountAddress} {v : UInt256} {z : Bool} :
     account_change_consistent acc σ (sendEthCreate a s v z σ)
 
   | by_own_code
@@ -275,57 +275,57 @@ def account_changes_consistent (acc : AccountAddress) :=
   Relation.ReflTransGen (account_change_consistent acc)
 
 private lemma rbNode_consume_self_stream {α} [BEq α] [ReflBEq α] :
-    ∀ (xs : List α) (s : Batteries.RBNode.Stream α),
+    ∀ (xs : List α) (s : RBTree.RBNode.Stream α),
       s.toList = xs →
       (match StateT.run (s := s)
-          (xs.forM (m := StateT (Batteries.RBNode.Stream α) Option) fun a s => do
-            let (b, s) ← Batteries.RBNode.Stream.next? s
+          (xs.forM (m := StateT (RBTree.RBNode.Stream α) Option) fun a s => do
+            let (b, s) ← RBTree.RBNode.Stream.next? s
             bif a == b then some (PUnit.unit, s) else none) with
-       | some (_, Batteries.RBNode.Stream.nil) => true
+       | some (_, RBTree.RBNode.Stream.nil) => true
        | _ => false) = true := by
   intro xs
   induction xs with
   | nil =>
       intro s h
-      cases s <;> simp [Batteries.RBNode.Stream.toList] at h ⊢
+      cases s <;> simp [RBTree.RBNode.Stream.toList] at h ⊢
   | cons x xs ih =>
       intro s h
       cases s with
-      | nil => simp [Batteries.RBNode.Stream.toList] at h
+      | nil => simp [RBTree.RBNode.Stream.toList] at h
       | cons v r tail =>
-          simp [Batteries.RBNode.Stream.toList, Batteries.RBNode.Stream.next?] at h ⊢
+          simp [RBTree.RBNode.Stream.toList, RBTree.RBNode.Stream.next?] at h ⊢
           rcases h with ⟨hv, htail⟩
           subst v
-          have htailStream : (Batteries.RBNode.toStream r tail).toList = xs := by
-            rw [Batteries.RBNode.toStream_toList']
-            simpa [Batteries.RBNode.foldr_cons, Batteries.RBNode.Stream.toList] using htail
-          simp only [StateT.run, BEq.rfl, cond_true, Option.bind_some]
-          exact ih (Batteries.RBNode.toStream r tail) htailStream
+          have htailStream : (RBTree.RBNode.toStream r tail).toList = xs := by
+            rw [RBTree.RBNode.toStream_toList']
+            simpa [RBTree.RBNode.foldr_cons, RBTree.RBNode.Stream.toList] using htail
+          simpa [StateT.run, RBTree.RBNode.Stream.next?] using
+            ih (RBTree.RBNode.toStream r tail) htailStream
 
-private lemma rbNode_all₂_self {α} [BEq α] [ReflBEq α] (t : Batteries.RBNode α) :
+private lemma rbNode_all₂_self {α} [BEq α] [ReflBEq α] (t : RBTree.RBNode α) :
     t.all₂ (· == ·) t = true := by
-  unfold Batteries.RBNode.all₂
-  rw [Batteries.RBNode.forM_eq_forM_toList]
+  unfold RBTree.RBNode.all₂
+  rw [RBTree.RBNode.forM_eq_forM_toList]
   exact rbNode_consume_self_stream t.toList t.toStream (by simp)
 
 private lemma rbSet_all₂_self {α} {cmp : α → α → Ordering} [BEq α] [ReflBEq α]
-    (t : Batteries.RBSet α cmp) : t.all₂ (· == ·) t = true := by
+    (t : RBTree.RBSet α cmp) : t.all₂ (· == ·) t = true := by
   exact rbNode_all₂_self t.1
 
 instance {α} {cmp : α → α → Ordering} [BEq α] [ReflBEq α] :
-    ReflBEq (Batteries.RBSet α cmp) where
+    ReflBEq (RBTree.RBSet α cmp) where
   rfl := by
     intro a
     exact rbSet_all₂_self a
 
 instance instRBMapReflBEq{α β} {cmp : α → α → Ordering} [BEq α] [BEq β] [ReflBEq α] [ReflBEq β] :
-    ReflBEq (Batteries.RBMap α β cmp) where
+    ReflBEq (RBTree.RBMap α β cmp) where
   rfl := by
     intro a
     exact rbSet_all₂_self a
 
 @[simp] lemma rbMap_empty_beq_empty {α β} {cmp : α → α → Ordering} [BEq α] [BEq β] :
-    ((∅ : Batteries.RBMap α β cmp) == ∅) = true := by
+    ((∅ : RBTree.RBMap α β cmp) == ∅) = true := by
   rfl
 
 lemma addr_neq_compare : ∀ (a b : AccountAddress), a ≠ b → ¬ compare a b = Ordering.eq := by
@@ -450,7 +450,7 @@ private lemma sendEth_true_get?_some_get?_some_ne
 private lemma depth_succ_measure {e : Fin 1025} {n : Nat}
     (hdepth : 1024 - e.val = n + 1) (hlt : e < 1024) :
     1024 - (e + 1).val = n := by
-  have hltVal : e.val < 1024 := by simpa using hlt
+  have hltVal : e.val < 1024 := by simpa [Fin.lt_def] using hlt
   have hval : (e + 1).val = e.val + 1 := by
     rw [Fin.val_add_eq_of_add_lt]
     simp
@@ -545,10 +545,9 @@ private lemma create_accountMap_eq_at_max_depth
     (h : create value offset size salt evmState = .ok (x, result)) :
     result.accountMap = evmState.accountMap := by
   unfold create at h
-  simp [hdepth, bind, Except.bind, pure, Except.pure] at h
+  simp [hdepth, bind, Except.bind] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rcases h with ⟨_, hstate⟩
     have hm := congrArg State.accountMap hstate
     simpa using hm.symm
@@ -571,7 +570,7 @@ private lemma account_changes_consistent_of_create_except_owner_succ_depth
     {owner with nonce := owner.nonce + ⟨1⟩}
   unfold create at h
   by_cases hnonce : owner.nonce.toNat ≥ 2^64 - 1
-  · simp [bind, Except.bind, pure, Except.pure] at h
+  · simp [bind, Except.bind] at h
     repeat' (split at h <;> try simp at h)
     all_goals
       first
@@ -611,7 +610,7 @@ private lemma account_changes_consistent_of_create_except_owner_succ_depth
           evmState.executionEnv.blobVersionedHashes evmState.executionEnv.blocks
           evmState.executionEnv.perm lambdaRes.1 lambdaRes.2.1 lambdaRes.2.2.1 lambdaRes.2.2.2.1
           lambdaRes.2.2.2.2.1 lambdaRes.2.2.2.2.2 hmeasure rfl
-      simp [hCreate, bind, Except.bind, pure, Except.pure] at h
+      simp [hCreate, bind, Except.bind] at h
       repeat' (split at h <;> try simp at h)
       all_goals
         first
@@ -619,15 +618,13 @@ private lemma account_changes_consistent_of_create_except_owner_succ_depth
         | rcases h with ⟨_, hstate⟩
           rw [← hstate]
           simpa [lambdaRes, σStar, owner] using account_changes_consistent_trans hpre hrec
-    · simp [hCreate, bind, Except.bind, pure, Except.pure] at h
+    · simp [hCreate, bind, Except.bind] at h
       repeat' (split at h <;> try simp at h)
       all_goals
-        first
-        | contradiction
-        | rcases h with ⟨_, hstate⟩
-          rw [← hstate]
-          simp
-          exact account_changes_consistent_rfl acc
+        rcases h with ⟨_, hstate⟩
+        rw [← hstate]
+        simp
+        exact account_changes_consistent_rfl acc
 
 private lemma lambda_create_not_failed_bool
     (b : Bool) (P Q R S : Prop) [Decidable P] [Decidable Q] [Decidable R] [Decidable S] :
@@ -838,11 +835,11 @@ private lemma dup_accountMap_eq
     state'.accountMap = state.accountMap := by
   unfold dup at h
   by_cases hlen : (List.take n state.machineState.stack).length = n
-  · rw [if_pos hlen] at h
+  · rw [ite_eq_left hlen] at h
     injection h with hstate
     rw [← hstate]
     simp [Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC]
-  · rw [if_neg hlen] at h
+  · rw [ite_eq_right hlen] at h
     contradiction
 
 private lemma swap_accountMap_eq
@@ -851,11 +848,11 @@ private lemma swap_accountMap_eq
     state'.accountMap = state.accountMap := by
   unfold swap at h
   by_cases hlen : (List.take (n + 1) state.machineState.stack).length = n + 1
-  · rw [if_pos hlen] at h
+  · rw [ite_eq_left hlen] at h
     injection h with hstate
     rw [← hstate]
     simp [Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC]
-  · rw [if_neg hlen] at h
+  · rw [ite_eq_right hlen] at h
     contradiction
 
 private lemma logOp_accountMap_eq
@@ -1271,7 +1268,7 @@ private lemma step_system_consistent_except_owner_max_depth
                     rw [sendEth_true_get?_some_get?_some_ne
                       target state.executionEnv.codeOwner ownerAcc.balance state.accountMap
                       targetAcc ownerAcc htarget howner hsame] at hpre
-                    simpa using hpre
+                    simpa [target, UInt256_ofNat_0] using hpre
         · cases howner : state.accountMap.get? state.executionEnv.codeOwner with
           | none =>
               simp [hpop, hcreated, howner] at h
@@ -1312,7 +1309,7 @@ private lemma step_system_consistent_except_owner_max_depth
                     rw [sendEth_true_get?_some_get?_some_ne
                       target state.executionEnv.codeOwner ownerAcc.balance state.accountMap
                       targetAcc ownerAcc htarget howner hsame] at hpre
-                    simpa using hpre
+                    simpa [target, UInt256_ofNat_0] using hpre
 
 set_option maxHeartbeats 1000000 in
 private lemma step_system_consistent_except_owner_succ_depth
@@ -1510,7 +1507,7 @@ private lemma step_system_consistent_except_owner_succ_depth
                     rw [sendEth_true_get?_some_get?_some_ne
                       target state.executionEnv.codeOwner ownerAcc.balance state.accountMap
                       targetAcc ownerAcc htarget howner hsame] at hpre
-                    simpa using hpre
+                    simpa [target, UInt256_ofNat_0] using hpre
         · cases howner : state.accountMap.get? state.executionEnv.codeOwner with
           | none =>
               simp [hpop, hcreated, howner] at h
@@ -1551,7 +1548,7 @@ private lemma step_system_consistent_except_owner_succ_depth
                     rw [sendEth_true_get?_some_get?_some_ne
                       target state.executionEnv.codeOwner ownerAcc.balance state.accountMap
                       targetAcc ownerAcc htarget howner hsame] at hpre
-                    simpa using hpre
+                    simpa [target, UInt256_ofNat_0] using hpre
 
 theorem account_changes_consistent_of_Z
     {op : Operation}
@@ -1560,67 +1557,67 @@ theorem account_changes_consistent_of_Z
     account_changes_consistent acc state.accountMap stateZ.accountMap := by
   unfold Z at hZ
   by_cases hδ : δ op = none
-  · rw [if_pos hδ] at hZ
+  · rw [ite_eq_left hδ] at hZ
     contradiction
-  rw [if_neg hδ] at hZ
+  rw [ite_eq_right hδ] at hZ
   by_cases hstack : state.machineState.stack.length < (δ op).getD 0
-  · rw [if_pos hstack] at hZ
+  · rw [ite_eq_left hstack] at hZ
     contradiction
-  rw [if_neg hstack] at hZ
+  rw [ite_eq_right hstack] at hZ
   by_cases hcost₁ : state.machineState.gasAvailable.toNat < memoryExpansionCost state op
-  · rw [if_pos hcost₁] at hZ
+  · rw [ite_eq_left hcost₁] at hZ
     contradiction
-  rw [if_neg hcost₁] at hZ
+  rw [ite_eq_right hcost₁] at hZ
   set state₁ : State :=
     { state with machineState.gasAvailable :=
         state.machineState.gasAvailable.subNat (memoryExpansionCost state op) } with hstate₁
   by_cases hcost₂ : state₁.machineState.gasAvailable.toNat < C' state₁ op
-  · rw [if_pos (by simpa [state₁] using hcost₂)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hcost₂)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hcost₂)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hcost₂)] at hZ
   by_cases hjump :
       op = Operation.JUMP ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjump)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hjump)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hjump)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hjump)] at hZ
   by_cases hjumpi :
       op = Operation.JUMPI ∧
         state₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjumpi)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hjumpi)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hjumpi)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hjumpi)] at hZ
   by_cases hreturndata :
       op = Operation.RETURNDATACOPY ∧
         (state₁.machineState.stack.getD 1 ⟨0⟩).toNat
           + (state₁.machineState.stack.getD 2 ⟨0⟩).toNat
             > state₁.machineState.returnData.size
-  · rw [if_pos (by simpa [state₁] using hreturndata)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hreturndata)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hreturndata)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hreturndata)] at hZ
   by_cases hstackover :
       state₁.machineState.stack.length - (δ op).getD 0 + (α op).getD 0 > 1024
-  · rw [if_pos (by simpa [state₁] using hstackover)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hstackover)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hstackover)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hstackover)] at hZ
   by_cases hstatic :
       (¬ state₁.executionEnv.perm) ∧
         (op ∈ [.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2, .LOG3, .LOG4, .TSTORE] ∨
           (op = .CALL ∧ state₁.machineState.stack[2]? ≠ some ⟨0⟩))
-  · rw [if_pos (by simpa [state₁] using hstatic)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hstatic)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hstatic)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hstatic)] at hZ
   by_cases hsstore :
       (op = .SSTORE) ∧ state₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [state₁] using hsstore)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hsstore)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hsstore)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hsstore)] at hZ
   by_cases hcreate :
       op.isCreate ∧ state₁.machineState.stack.getD 2 ⟨0⟩ > ⟨49152⟩
-  · rw [if_pos (by simpa [state₁] using hcreate)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hcreate)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hcreate)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hcreate)] at hZ
   simp at hZ
   rcases hZ with ⟨hstate, _hcost⟩
   rw [← hstate]
@@ -1634,67 +1631,67 @@ theorem Z_executionEnv_eq
     stateZ.executionEnv = state.executionEnv := by
   unfold Z at hZ
   by_cases hδ : δ op = none
-  · rw [if_pos hδ] at hZ
+  · rw [ite_eq_left hδ] at hZ
     contradiction
-  rw [if_neg hδ] at hZ
+  rw [ite_eq_right hδ] at hZ
   by_cases hstack : state.machineState.stack.length < (δ op).getD 0
-  · rw [if_pos hstack] at hZ
+  · rw [ite_eq_left hstack] at hZ
     contradiction
-  rw [if_neg hstack] at hZ
+  rw [ite_eq_right hstack] at hZ
   by_cases hcost₁ : state.machineState.gasAvailable.toNat < memoryExpansionCost state op
-  · rw [if_pos hcost₁] at hZ
+  · rw [ite_eq_left hcost₁] at hZ
     contradiction
-  rw [if_neg hcost₁] at hZ
+  rw [ite_eq_right hcost₁] at hZ
   set state₁ : State :=
     { state with machineState.gasAvailable :=
         state.machineState.gasAvailable.subNat (memoryExpansionCost state op) } with hstate₁
   by_cases hcost₂ : state₁.machineState.gasAvailable.toNat < C' state₁ op
-  · rw [if_pos (by simpa [state₁] using hcost₂)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hcost₂)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hcost₂)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hcost₂)] at hZ
   by_cases hjump :
       op = Operation.JUMP ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjump)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hjump)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hjump)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hjump)] at hZ
   by_cases hjumpi :
       op = Operation.JUMPI ∧
         state₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjumpi)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hjumpi)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hjumpi)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hjumpi)] at hZ
   by_cases hreturndata :
       op = Operation.RETURNDATACOPY ∧
         (state₁.machineState.stack.getD 1 ⟨0⟩).toNat
           + (state₁.machineState.stack.getD 2 ⟨0⟩).toNat
             > state₁.machineState.returnData.size
-  · rw [if_pos (by simpa [state₁] using hreturndata)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hreturndata)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hreturndata)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hreturndata)] at hZ
   by_cases hstackover :
       state₁.machineState.stack.length - (δ op).getD 0 + (α op).getD 0 > 1024
-  · rw [if_pos (by simpa [state₁] using hstackover)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hstackover)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hstackover)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hstackover)] at hZ
   by_cases hstatic :
       (¬ state₁.executionEnv.perm) ∧
         (op ∈ [.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2, .LOG3, .LOG4, .TSTORE] ∨
           (op = .CALL ∧ state₁.machineState.stack[2]? ≠ some ⟨0⟩))
-  · rw [if_pos (by simpa [state₁] using hstatic)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hstatic)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hstatic)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hstatic)] at hZ
   by_cases hsstore :
       (op = .SSTORE) ∧ state₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [state₁] using hsstore)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hsstore)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hsstore)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hsstore)] at hZ
   by_cases hcreate :
       op.isCreate ∧ state₁.machineState.stack.getD 2 ⟨0⟩ > ⟨49152⟩
-  · rw [if_pos (by simpa [state₁] using hcreate)] at hZ
+  · rw [ite_eq_left (by simpa [state₁] using hcreate)] at hZ
     contradiction
-  rw [if_neg (by simpa [state₁] using hcreate)] at hZ
+  rw [ite_eq_right (by simpa [state₁] using hcreate)] at hZ
   simp at hZ
   rcases hZ with ⟨hstate, _hcost⟩
   rw [← hstate]
@@ -1873,7 +1870,6 @@ theorem account_changes_consistent_except_owner_of_Xstep_max_depth :
         exact account_changes_consistent_trans hZLoc (by simpa using hStepLoc)
       repeat split at hXstep
       all_goals
-        try contradiction
         try
           injection hXstep with hpair
           have hstateEq : { stepped with executionEnv := state.executionEnv } = state' :=
@@ -1956,7 +1952,6 @@ theorem account_changes_consistent_except_owner_of_Xstep_succ_depth :
         exact account_changes_consistent_trans hZLoc (by simpa using hStepLoc)
       repeat split at hXstep
       all_goals
-        try contradiction
         try
           injection hXstep with hpair
           have hstateEq : { stepped with executionEnv := state.executionEnv } = state' :=
@@ -2360,16 +2355,16 @@ private lemma precompiled_Theta_accountMap_eq
           blobVersionedHashes := blobVersionedHashes, blocks := blocks }
        let result : AccountMap × UInt256 × Substate × ByteArray :=
         match pc with
-        | 1 => Ξ_ECREC σ₁ g A I
-        | 2 => Ξ_SHA256 σ₁ g A I
-        | 3 => Ξ_RIP160 σ₁ g A I
-        | 4 => Ξ_ID σ₁ g A I
-        | 5 => Ξ_EXPMOD σ₁ g A I
-        | 6 => Ξ_BN_ADD σ₁ g A I
-        | 7 => Ξ_BN_MUL σ₁ g A I
-        | 8 => Ξ_SNARKV σ₁ g A I
-        | 9 => Ξ_BLAKE2_F σ₁ g A I
-        | 10 => Ξ_PointEval σ₁ g A I
+        | ⟨1, _⟩ => Ξ_ECREC σ₁ g A I
+        | ⟨2, _⟩ => Ξ_SHA256 σ₁ g A I
+        | ⟨3, _⟩ => Ξ_RIP160 σ₁ g A I
+        | ⟨4, _⟩ => Ξ_ID σ₁ g A I
+        | ⟨5, _⟩ => Ξ_EXPMOD σ₁ g A I
+        | ⟨6, _⟩ => Ξ_BN_ADD σ₁ g A I
+        | ⟨7, _⟩ => Ξ_BN_MUL σ₁ g A I
+        | ⟨8, _⟩ => Ξ_SNARKV σ₁ g A I
+        | ⟨9, _⟩ => Ξ_BLAKE2_F σ₁ g A I
+        | ⟨10, _⟩ => Ξ_PointEval σ₁ g A I
         | _ => default
        if result.1 == ∅ then σ else result.1) := by
   unfold Θ sendEth
@@ -2380,30 +2375,30 @@ private lemma precompiled_result_accountMap_empty_or_self
     (pc : AccountAddress) (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (let result : AccountMap × UInt256 × Substate × ByteArray :=
       match pc with
-      | 1 => Ξ_ECREC σ g A I
-      | 2 => Ξ_SHA256 σ g A I
-      | 3 => Ξ_RIP160 σ g A I
-      | 4 => Ξ_ID σ g A I
-      | 5 => Ξ_EXPMOD σ g A I
-      | 6 => Ξ_BN_ADD σ g A I
-      | 7 => Ξ_BN_MUL σ g A I
-      | 8 => Ξ_SNARKV σ g A I
-      | 9 => Ξ_BLAKE2_F σ g A I
-      | 10 => Ξ_PointEval σ g A I
+      | ⟨1, _⟩ => Ξ_ECREC σ g A I
+      | ⟨2, _⟩ => Ξ_SHA256 σ g A I
+      | ⟨3, _⟩ => Ξ_RIP160 σ g A I
+      | ⟨4, _⟩ => Ξ_ID σ g A I
+      | ⟨5, _⟩ => Ξ_EXPMOD σ g A I
+      | ⟨6, _⟩ => Ξ_BN_ADD σ g A I
+      | ⟨7, _⟩ => Ξ_BN_MUL σ g A I
+      | ⟨8, _⟩ => Ξ_SNARKV σ g A I
+      | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
+      | ⟨10, _⟩ => Ξ_PointEval σ g A I
       | _ => default
      result.1) = ∅ ∨
     (let result : AccountMap × UInt256 × Substate × ByteArray :=
       match pc with
-      | 1 => Ξ_ECREC σ g A I
-      | 2 => Ξ_SHA256 σ g A I
-      | 3 => Ξ_RIP160 σ g A I
-      | 4 => Ξ_ID σ g A I
-      | 5 => Ξ_EXPMOD σ g A I
-      | 6 => Ξ_BN_ADD σ g A I
-      | 7 => Ξ_BN_MUL σ g A I
-      | 8 => Ξ_SNARKV σ g A I
-      | 9 => Ξ_BLAKE2_F σ g A I
-      | 10 => Ξ_PointEval σ g A I
+      | ⟨1, _⟩ => Ξ_ECREC σ g A I
+      | ⟨2, _⟩ => Ξ_SHA256 σ g A I
+      | ⟨3, _⟩ => Ξ_RIP160 σ g A I
+      | ⟨4, _⟩ => Ξ_ID σ g A I
+      | ⟨5, _⟩ => Ξ_EXPMOD σ g A I
+      | ⟨6, _⟩ => Ξ_BN_ADD σ g A I
+      | ⟨7, _⟩ => Ξ_BN_MUL σ g A I
+      | ⟨8, _⟩ => Ξ_SNARKV σ g A I
+      | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
+      | ⟨10, _⟩ => Ξ_PointEval σ g A I
       | _ => default
      result.1) = σ := by
   repeat split
@@ -2558,7 +2553,9 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                   · simp
                 apply account_changes_consistent_trans
                 · exact account_changes_consistent_sendEth_prelude acc r s v true σ
-                · simpa [sendEth] using hXiAcc
+                · convert hXiAcc using 2
+                  simp only [sendEth, ite_true]
+                  split <;> split <;> simp_all
       · intro hLambda acc
         by_cases hacc_ne_a : acc ≠ a
         ·
@@ -2607,7 +2604,7 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
             subst e
             unfold Lambda at hLambda
             simp [account_dead] at hLambda hdead
-            repeat split at hLambda <;> try contradiction
+            repeat split at hLambda
             all_goals
                 simp at hLambda
                 rcases hLambda with ⟨ha, hσ, hg, hA, hz, ho⟩
@@ -2657,9 +2654,12 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                             (out := returnedData)
                             (by
                               dsimp [σStarCollision]
-                              simpa [Std.ExtTreeMap.getD_eq_getD_getElem?,
-                                ← Std.ExtTreeMap.get?_eq_getElem?, ha, hfind, hfinal.1.1, hfinal.1.2,
-                                hstorage_bne, hstorage_ne_default] using hXi))
+                              have h' := hXi
+                              simp only [Std.ExtTreeMap.getD_eq_getD_getElem?,
+                                ← Std.ExtTreeMap.get?_eq_getElem?, ha, hfind, hfinal.1.1,
+                                hfinal.1.2] at h' ⊢
+                              convert h' using 2
+                              all_goals split <;> first | rfl | simp_all))
   | succ n' ih =>
       constructor
       · intro hTheta acc hacc_ne_r
@@ -2716,7 +2716,9 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                       hLambdaᵢ acc
                 apply account_changes_consistent_trans
                 · exact account_changes_consistent_sendEth_prelude acc r s v true σ
-                · simpa [sendEth] using hXiAcc
+                · convert hXiAcc using 2
+                  simp only [sendEth, ite_true]
+                  split <;> split <;> simp_all
       · intro hLambda acc
         by_cases hacc_ne_a : acc ≠ a
         · unfold Lambda at hLambda
@@ -2781,7 +2783,7 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
           ·
             unfold Lambda at hLambda
             simp [account_dead] at hLambda hdead
-            repeat split at hLambda <;> try contradiction
+            repeat split at hLambda
             all_goals
                 simp at hLambda
                 rcases hLambda with ⟨ha, hσ, hg, hA, hz, ho⟩
@@ -2831,9 +2833,15 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                             (out := returnedData)
                             (by
                               dsimp [σStarCollision]
-                              simpa [Std.ExtTreeMap.getD_eq_getD_getElem?,
-                                ← Std.ExtTreeMap.get?_eq_getElem?, ha, hfind, hfinal.1.1, hfinal.1.2,
-                                hstorage_bne, hstorage_ne_default] using hXi))
+                              have h' := hXi
+                              simp only [Std.ExtTreeMap.getD_eq_getD_getElem?,
+                                ← Std.ExtTreeMap.get?_eq_getElem?, ha, hfind, hfinal.1.1,
+                                hfinal.1.2] at h' ⊢
+                              convert h' using 2
+                              all_goals first
+                                | (simp [hfinal.1.1, hfinal.1.2,
+                                    hstorage_ne_default]; done)
+                                | (split <;> first | rfl | simp_all)))
 
 theorem account_changes_consistent_of_Theta :
     ∀ σ' g' A' z o' e,

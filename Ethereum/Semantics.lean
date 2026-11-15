@@ -285,7 +285,7 @@ def create
   decreasing_by
     apply Prod.Lex.left
     have hDepth_lt : evmState.executionEnv.depth.val < 1024 := by
-      simpa [Iₑ, I] using hDepth.2.1
+      simpa [Iₑ, I, Fin.lt_def] using hDepth.2.1
     change 1024 - (evmState.executionEnv.depth.val + 1) < 1024 - evmState.executionEnv.depth.val
     exact Nat.sub_lt_sub_left hDepth_lt (Nat.lt_succ_self _)
 
@@ -1043,16 +1043,16 @@ def Θ (σ  : AccountMap)
     match c with
       | ToExecute.Precompiled p =>
         match p with
-          | 1  => Ξ_ECREC σ₁ g A I
-          | 2  => Ξ_SHA256 σ₁ g A I
-          | 3  => Ξ_RIP160 σ₁ g A I
-          | 4  => Ξ_ID σ₁ g A I
-          | 5  => Ξ_EXPMOD σ₁ g A I
-          | 6  => Ξ_BN_ADD σ₁ g A I
-          | 7  => Ξ_BN_MUL σ₁ g A I
-          | 8  => Ξ_SNARKV σ₁ g A I
-          | 9  => Ξ_BLAKE2_F σ₁ g A I
-          | 10 => Ξ_PointEval σ₁ g A I
+          | ⟨1, _⟩  => Ξ_ECREC σ₁ g A I
+          | ⟨2, _⟩  => Ξ_SHA256 σ₁ g A I
+          | ⟨3, _⟩  => Ξ_RIP160 σ₁ g A I
+          | ⟨4, _⟩  => Ξ_ID σ₁ g A I
+          | ⟨5, _⟩  => Ξ_EXPMOD σ₁ g A I
+          | ⟨6, _⟩  => Ξ_BN_ADD σ₁ g A I
+          | ⟨7, _⟩  => Ξ_BN_MUL σ₁ g A I
+          | ⟨8, _⟩  => Ξ_SNARKV σ₁ g A I
+          | ⟨9, _⟩  => Ξ_BLAKE2_F σ₁ g A I
+          | ⟨10, _⟩ => Ξ_PointEval σ₁ g A I
           | _ => default
       | ToExecute.Code _ =>
         match Ξ σ₁ σ₀ g A I with
@@ -1084,7 +1084,7 @@ def Θ (σ  : AccountMap)
 
 end
 
-open Batteries (RBMap RBSet)
+open RBTree (RBMap RBSet)
 
 
 -- Type Υ using \Upsilon or \GU
@@ -1133,7 +1133,7 @@ def Υ
   let a := -- (80)
     A0.accessedAccounts.insert S_T
       |>.insert H.beneficiary
-      |>.union <| Batteries.RBSet.ofList (accessList.map Prod.fst) compare
+      |>.union <| RBTree.RBSet.ofList (accessList.map Prod.fst) compare
   -- (81)
   let g := .ofNat <| T.base.gasLimit.toNat - g₀
   let AStarₐ := -- (79)
@@ -1141,7 +1141,7 @@ def Υ
       | some t => a.insert t
       | none => a
   let AStar := -- (77)
-    { A0 with accessedAccounts := AStarₐ, accessedStorageKeys := Batteries.RBSet.ofList AStar_K Substate.storageKeysCmp}
+    { A0 with accessedAccounts := AStarₐ, accessedStorageKeys := RBTree.RBSet.ofList AStar_K Substate.storageKeysCmp}
   let (/- provisional state -/ σ_P, g', A, z) ← -- (76)
     match T.base.recipient with
       | none => do

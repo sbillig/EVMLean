@@ -8,6 +8,9 @@ namespace Ethereum
 
 namespace EVM
 
+-- `Id.run` is no longer unfolded by `simp` (Lean 4.35); the lemmas below reduce `Id.run x` to `x`.
+attribute [local simp] Id.run
+
 set_option maxHeartbeats 2000000 in
 lemma Z_no_OutOfFuel {w s} validJumps :
   -- Z validJumps w s = .error e → e ≠ .OutOfFuel := by
@@ -152,7 +155,7 @@ lemma Z_no_OutOfFuel {w s} validJumps :
     create value offset size salt evmState ≠ .error .OutOfFuel := by
   intro h
   unfold create at h
-  simp [bind, Except.bind, pure, Except.pure] at h
+  simp [bind, Except.bind] at h
   repeat' (split at h <;> try simp at h)
 
 private lemma step_create_no_OutOfFuel {g state arg} :

@@ -49,8 +49,7 @@ def UInt256.toByteArrayWithSizeProof (val : UInt256) : { b : ByteArray // b.size
       simp [pad]
       rw [ByteArray_zeroes_size]
       have hb : b.size ≤ 32 := by
-        have ha : (val.toNat : ℕ) < 2 ^ (8 * 32) := by
-          simp [UInt256.size, UInt256.toNat]
+        have ha : (val.toNat : ℕ) < 2 ^ (8 * 32) := val.val.isLt
         simpa [b, BE] using toBytesBigEndian_le (k := 32) ha
       omega
       ⟩
@@ -79,8 +78,11 @@ instance {n : Nat} : OfNat AccountAddress n := ⟨Fin.ofNat _ n⟩
 lemma ofUInt256_ofNat (a : AccountAddress) :
     AccountAddress.ofUInt256 (UInt256.ofNat a.val) = a := by
   ext
+  have ha := a.isLt
   unfold AccountAddress.ofUInt256 UInt256.ofNat
-  simp [Id.run, AccountAddress.size, UInt256.size]
+  rw [Id.run, Fin.val_ofNat, Fin.val_ofNat]
+  simp only [AccountAddress.size, UInt256.size] at ha ⊢
+  omega
 
 def toByteArray (a : AccountAddress) : ByteArray :=
   let b := BE a
@@ -95,8 +97,7 @@ def toByteArrayWithSizeProof (a : AccountAddress) : { b : ByteArray // b.size = 
       simp [pad]
       rw [ByteArray_zeroes_size]
       have hb : b.size ≤ 20 := by
-        have ha : (a : ℕ) < 2 ^ (8 * 20) := by
-          simp [AccountAddress.size]
+        have ha : (a : ℕ) < 2 ^ (8 * 20) := a.isLt
         simpa [b, BE] using toBytesBigEndian_le (k := 20) ha
       omega
       ⟩
@@ -140,11 +141,11 @@ section
 
 open NaryNotation
 
-def Nullary    := !nary[UInt256 ^ 0]
-def Unary      := !nary[UInt256 ^ 1]
-def Binary     := !nary[UInt256 ^ 2]
-def Ternary    := !nary[UInt256 ^ 3]
-def Quaternary := !nary[UInt256 ^ 4]
+abbrev Nullary    := !nary[UInt256 ^ 0]
+abbrev Unary      := !nary[UInt256 ^ 1]
+abbrev Binary     := !nary[UInt256 ^ 2]
+abbrev Ternary    := !nary[UInt256 ^ 3]
+abbrev Quaternary := !nary[UInt256 ^ 4]
 
 end
 

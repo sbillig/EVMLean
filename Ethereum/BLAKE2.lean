@@ -492,7 +492,7 @@ theorem F_eq_Ffast (r : Nat) {h m : Array UInt64} (hh : h.size = 8) (hm : m.size
   have hv : (h ++ IV).size = 16 := by simp [hh, IV]
   unfold F Ffast
   cases f <;>
-    simp only [Bool.false_eq_true, if_true, if_false] <;>
+    simp only [Bool.false_eq_true, ite_true, ite_false] <;>
     rw [← rounds_eq, ofArray_toArray hm, ofArray_toArray (by simp [hv])]
 
 /-- `compressInput`, computed with `Ffast`. -/

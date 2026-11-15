@@ -32,6 +32,6 @@ theorem checkedPrecompileOutput_ok_size
         simp [pure, Except.pure] at h
         subst output
         exact hsize
-      · simp [pure, Except.pure] at h
+      · simp at h
 
 end Ethereum

@@ -22,8 +22,8 @@ theorem Ξ_BN_ADD_eq (σ : AccountMap) (g : UInt256) (A : Substate) (I : Executi
         | some o => (σ, g - .ofNat 150, A, o)
         | none => (∅, ⟨0⟩, A, .empty) := by
   by_cases hg : g.toNat < 150
-  · simp only [Ξ_BN_ADD, if_pos hg]
-  simp only [Ξ_BN_ADD, if_neg hg, BN_ADD, Spec.word, ← add_eq, Nat.mul_zero, Nat.mul_one,
+  · simp only [Ξ_BN_ADD, ite_eq_left hg]
+  simp only [Ξ_BN_ADD, ite_eq_right hg, BN_ADD, Spec.word, ← add_eq, Nat.mul_zero, Nat.mul_one,
     show 32 * 2 = 64 from rfl, show 32 * 3 = 96 from rfl]
   rcases BN254.add (fromByteArrayBigEndian (I.calldata.readBytes 0 32))
     (fromByteArrayBigEndian (I.calldata.readBytes 32 32))
@@ -41,8 +41,8 @@ theorem Ξ_BN_MUL_eq (σ : AccountMap) (g : UInt256) (A : Substate) (I : Executi
         | some o => (σ, g - .ofNat 6000, A, o)
         | none => (∅, ⟨0⟩, A, .empty) := by
   by_cases hg : g.toNat < 6000
-  · simp only [Ξ_BN_MUL, if_pos hg]
-  simp only [Ξ_BN_MUL, if_neg hg, BN_MUL, Spec.word, ← mul_eq, Nat.mul_zero, Nat.mul_one,
+  · simp only [Ξ_BN_MUL, ite_eq_left hg]
+  simp only [Ξ_BN_MUL, ite_eq_right hg, BN_MUL, Spec.word, ← mul_eq, Nat.mul_zero, Nat.mul_one,
     show 32 * 2 = 64 from rfl]
   rcases BN254.mul (fromByteArrayBigEndian (I.calldata.readBytes 0 32))
     (fromByteArrayBigEndian (I.calldata.readBytes 32 32))

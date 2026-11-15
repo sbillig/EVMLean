@@ -139,15 +139,15 @@ lemma Z_memoryExpansionCost_le {validJumps : Array UInt256} {w : Operation}
     memoryExpansionCost state w ≤ state.machineState.gasAvailable.toNat := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : state.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : state.machineState.gasAvailable.toNat < memoryExpansionCost state w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
   exact Nat.le_of_not_gt hcost₁
 
@@ -159,67 +159,67 @@ lemma Z_stack_active_eq {validJumps : Array UInt256} {w : Operation}
       stateZ.machineState.memory = state.machineState.memory := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : state.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : state.machineState.gasAvailable.toNat < memoryExpansionCost state w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (state.subtractGas (memoryExpansionCost state w)).machineState.gasAvailable.toNat <
         C' (state.subtractGas (memoryExpansionCost state w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set state₁ : State := state.subtractGas (memoryExpansionCost state w)
   by_cases hjump :
       w = Operation.JUMP ∧ Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         state₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (state₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (state₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           state₁.machineState.returnData.size
-  · rw [if_pos (by simpa [state₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       state₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [state₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬state₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬state₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [state₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧ state₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [state₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ state₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [state₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hstate : state₁ = stateZ := congrArg Prod.fst hp
   subst stateZ
@@ -232,67 +232,67 @@ lemma Z_gasAvailable_eq {validJumps : Array UInt256} {w : Operation}
       state.machineState.gasAvailable.toNat - memoryExpansionCost state w := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : state.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : state.machineState.gasAvailable.toNat < memoryExpansionCost state w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (state.subtractGas (memoryExpansionCost state w)).machineState.gasAvailable.toNat <
         C' (state.subtractGas (memoryExpansionCost state w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set state₁ : State := state.subtractGas (memoryExpansionCost state w)
   by_cases hjump :
       w = Operation.JUMP ∧ Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         state₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn state₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [state₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (state₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (state₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           state₁.machineState.returnData.size
-  · rw [if_pos (by simpa [state₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       state₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [state₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬state₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬state₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [state₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧ state₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [state₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ state₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [state₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [state₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [state₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [state₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hstate : state₁ = stateZ := congrArg Prod.fst hp
   subst stateZ
@@ -409,7 +409,6 @@ lemma call_activeWords_le_memoryExpansionWords {gasCost : Nat}
   simp [bind, Except.bind, pure, Except.pure, writeBytes] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rcases h with ⟨_, hstate⟩
     rw [← hstate]
     simp [UInt256.toNat_ofNat_M, UInt256.toNat_ofNat_M_M]
@@ -421,10 +420,9 @@ lemma create_activeWords_le_memoryExpansionWords
     state'.machineState.activeWords.toNat ≤
       MachineState.M state.machineState.activeWords.toNat offset.toNat size.toNat := by
   unfold create at h
-  simp [bind, Except.bind, pure, Except.pure] at h
+  simp [bind, Except.bind] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rcases h with ⟨_, hstate⟩
     rw [← hstate]
     simp [UInt256.toNat_ofNat_M]
@@ -607,7 +605,6 @@ lemma step_call_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rename_i _ popped hLift _ callResult hCall
     have hpop := option_liftM_eq_some hLift
     have hcallActive := call_activeWords_le_memoryExpansionWords hCall
@@ -625,7 +622,6 @@ lemma step_callcode_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rename_i _ popped hLift _ callResult hCall
     have hpop := option_liftM_eq_some hLift
     have hcallActive := call_activeWords_le_memoryExpansionWords hCall
@@ -643,7 +639,6 @@ lemma step_delegatecall_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rename_i _ popped hLift _ callResult hCall
     have hpop := option_liftM_eq_some hLift
     have hcallActive := call_activeWords_le_memoryExpansionWords hCall
@@ -661,7 +656,6 @@ lemma step_staticcall_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rename_i _ popped hLift _ callResult hCall
     have hpop := option_liftM_eq_some hLift
     have hcallActive := call_activeWords_le_memoryExpansionWords hCall
@@ -679,7 +673,6 @@ lemma step_create_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rw [← h]
     cases hs : state.machineState.stack with
     | nil => simp_all [memoryExpansionWords, UInt256.toNat_ofNat_M, Stack.pop3]
@@ -707,7 +700,6 @@ lemma step_create2_activeWords_le_memoryExpansionWords {gasCost : Nat}
     Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rw [← h]
     cases hs : state.machineState.stack with
     | nil => simp_all [memoryExpansionWords, UInt256.toNat_ofNat_M, Stack.pop4]
@@ -1128,10 +1120,8 @@ lemma step_stoparith_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 set_option linter.unusedSimpArgs false in
@@ -1146,10 +1136,8 @@ lemma step_compbit_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 set_option linter.unusedSimpArgs false in
@@ -1169,7 +1157,6 @@ lemma step_env_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1196,7 +1183,6 @@ lemma step_env_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1226,7 +1212,6 @@ lemma step_env_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1244,7 +1229,6 @@ lemma step_env_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1261,10 +1245,8 @@ lemma step_block_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 set_option linter.unusedSimpArgs false in
@@ -1277,8 +1259,6 @@ lemma step_stackmemflow_activeWords_le_memoryExpansionWords {gasCost : Nat}
     simp [memoryExpansionWords, Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
   · exact step_mload_activeWords_le_memoryExpansionWords h
@@ -1289,7 +1269,6 @@ lemma step_stackmemflow_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1298,26 +1277,20 @@ lemma step_stackmemflow_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords, State.sstore_activeWords]
   · exact step_mstore8_activeWords_le_memoryExpansionWords h
   · unfold step at h
     simp [memoryExpansionWords] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
   · unfold step at h
     simp [memoryExpansionWords] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
   · unfold step at h
@@ -1346,7 +1319,6 @@ lemma step_stackmemflow_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
       try simp [memoryExpansionWords]
@@ -1355,10 +1327,8 @@ lemma step_stackmemflow_activeWords_le_memoryExpansionWords {gasCost : Nat}
       Ethereum.State.incrPC] at h
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
       try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords, State.tstore_activeWords]
   · exact step_mcopy_activeWords_le_memoryExpansionWords h
 
@@ -1374,10 +1344,7 @@ lemma step_push_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 set_option linter.unusedSimpArgs false in
@@ -1392,10 +1359,7 @@ lemma step_dup_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 set_option linter.unusedSimpArgs false in
@@ -1410,10 +1374,7 @@ lemma step_exchange_activeWords_le_memoryExpansionWords {gasCost : Nat}
   all_goals
     repeat' (split at h <;> try simp at h)
     all_goals
-      try contradiction
-      try injection h with hstate
       try subst state'
-      try cases h
       try simp [memoryExpansionWords]
 
 lemma step_keccak_group_activeWords_le_memoryExpansionWords {gasCost : Nat}
@@ -1443,10 +1404,7 @@ lemma step_selfdestruct_activeWords_le_memoryExpansionWords {gasCost : Nat}
   simp [memoryExpansionWords, Ethereum.State.replaceStackAndIncrPC, Ethereum.State.incrPC] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
-    try injection h with hstate
     try subst state'
-    try cases h
     try simp [memoryExpansionWords]
 
 lemma step_system_activeWords_le_memoryExpansionWords {gasCost : Nat}
@@ -2079,7 +2037,6 @@ lemma Xstep_memoryPaidByGas_of_none {validJumps : Array UInt256} {state state' :
       repeat (first | split at h | cases h)
       all_goals
         try (by_cases hwrev : w = Operation.REVERT <;> simp [hwrev] at h)
-        try cases h
       have htarget :=
         memoryPaidByGas_after_Z_target hpaid (by simpa using hZ)
       have hsame := Z_stack_active_eq (by simpa using hZ)
@@ -2351,8 +2308,8 @@ lemma Xi_success_output_size_le_maxReturnDataSizeByGas
             simp only [memoryPaidByGas, Cₘ, GasConstants.Gmemory, Cₘ.QuadraticCeofficient]
             have h0 : (default : State).machineState.activeWords.toNat = 0 := by rfl
             rw [h0]
-            simpa only [Nat.mul_zero, Nat.zero_mul, Nat.zero_add, Nat.add_zero, Nat.zero_div]
-              using g.val.isLt
+            simp only [Nat.mul_zero, Nat.zero_add, Nat.add_zero, Nat.zero_div]
+            exact g.val.isLt
           have hout := X_success_output_size_le_maxReturnDataSizeByGas hpaid₀ hx
           simp [hx] at h
           rcases h with ⟨_, houtEq⟩
@@ -2395,8 +2352,8 @@ lemma Xi_revert_output_size_le_maxReturnDataSizeByGas
             simp only [memoryPaidByGas, Cₘ, GasConstants.Gmemory, Cₘ.QuadraticCeofficient]
             have h0 : (default : State).machineState.activeWords.toNat = 0 := by rfl
             rw [h0]
-            simpa only [Nat.mul_zero, Nat.zero_mul, Nat.zero_add, Nat.add_zero, Nat.zero_div]
-              using g.val.isLt
+            simp only [Nat.mul_zero, Nat.zero_add, Nat.add_zero, Nat.zero_div]
+            exact g.val.isLt
           have hout := X_revert_output_size_le_maxReturnDataSizeByGas hpaid₀ hx
           simp [hx] at h
           rcases h with ⟨_, houtEq⟩
@@ -2525,7 +2482,7 @@ lemma lambda_projection_output_size_le_maxReturnDataSizeByGas
   let a : AccountAddress := (KEC lₐ).extract 12 32 |> fromByteArrayBigEndian |> Fin.ofNat _
   let AStar := A.addAccessedAccount a
   let existentAccount := σ.getD a default
-  let collision : ByteArray × Batteries.RBSet AccountAddress compare :=
+  let collision : ByteArray × RBTree.RBSet AccountAddress compare :=
     if existentAccount.nonce ≠ ⟨0⟩ || existentAccount.code.size ≠ 0 ||
         existentAccount.storage != default then
       (⟨#[0xfe]⟩, A.createdAccounts)
@@ -2548,11 +2505,7 @@ lemma lambda_projection_output_size_le_maxReturnDataSizeByGas
       blobVersionedHashes := blobVersionedHashes, blocks := blocks }
   unfold Lambda
   simp only
-  exact (by
-    simpa only [n, lₐ, a, AStar, existentAccount, collision, initCode, createdAccountsStar,
-      newAccount, σStar, exEnv] using
-      (Lambda_Xi_tuple_match_output_size_le_maxReturnDataSizeByGas a
-        σ σStar σ₀ g A AStar exEnv))
+  exact Lambda_Xi_tuple_match_output_size_le_maxReturnDataSizeByGas a σ σStar σ₀ g A AStar exEnv
 
 lemma lambda_projection_output_size_lt_uint256
     (σ σ₀ : AccountMap) (A : Substate) (s o : AccountAddress)
@@ -2705,9 +2658,7 @@ lemma theta_code_projection_output_size_le_maxReturnDataSizeByGas
       header := H, blobVersionedHashes := blobVersionedHashes, blocks := blocks }
   unfold Θ
   simp only
-  exact (by
-    simpa only [σ'₁, σ₁, I] using
-      (Xi_tuple_match_output_size_le_maxReturnDataSizeByGas σ₁ σ₀ g A I))
+  exact Xi_tuple_match_output_size_le_maxReturnDataSizeByGas σ₁ σ₀ g A I
 
 lemma theta_code_projection_output_size_lt_uint256
     (σ σ₀ : AccountMap) (A : Substate) (s o r : AccountAddress)
@@ -3023,7 +2974,7 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
           simpa [data, base_length, exp_length, modulus_length, modulus] using hbase_size
         omega
       · rw [Ξ_EXPMOD]
-        rw [if_neg (by
+        rw [ite_eq_right (by
           intro hg
           apply hgas
           simpa [expmodVariableCost] using hg)]
@@ -3051,16 +3002,16 @@ private def precompileDispatchResult
     (I : ExecutionEnv) :
     AccountMap × UInt256 × Substate × ByteArray :=
   match pc with
-  | 1 => Ξ_ECREC σ g A I
-  | 2 => Ξ_SHA256 σ g A I
-  | 3 => Ξ_RIP160 σ g A I
-  | 4 => Ξ_ID σ g A I
-  | 5 => Ξ_EXPMOD σ g A I
-  | 6 => Ξ_BN_ADD σ g A I
-  | 7 => Ξ_BN_MUL σ g A I
-  | 8 => Ξ_SNARKV σ g A I
-  | 9 => Ξ_BLAKE2_F σ g A I
-  | 10 => Ξ_PointEval σ g A I
+  | ⟨1, _⟩ => Ξ_ECREC σ g A I
+  | ⟨2, _⟩ => Ξ_SHA256 σ g A I
+  | ⟨3, _⟩ => Ξ_RIP160 σ g A I
+  | ⟨4, _⟩ => Ξ_ID σ g A I
+  | ⟨5, _⟩ => Ξ_EXPMOD σ g A I
+  | ⟨6, _⟩ => Ξ_BN_ADD σ g A I
+  | ⟨7, _⟩ => Ξ_BN_MUL σ g A I
+  | ⟨8, _⟩ => Ξ_SNARKV σ g A I
+  | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
+  | ⟨10, _⟩ => Ξ_PointEval σ g A I
   | _ => default
 
 lemma precompile_ECREC_output_size_le_maxReturnDataSizeByGas_or_calldata
@@ -3207,10 +3158,10 @@ lemma BLAKE2_ok_output_size {d s : ByteArray} :
   intro h
   rw [BLAKE2.precompile_eq] at h
   by_cases hc : d.size = 213 ∧ d[212]! ≤ 1
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     rw [← Option.some.inj h]
     exact BLAKE2.compressInput_size d
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     exact absurd h (Option.some_ne_none s).symm
 
 lemma precompile_BLAKE2_F_output_size_le_maxReturnDataSizeByGas_or_calldata
@@ -3325,9 +3276,6 @@ lemma theta_precompiled_output_size_le_maxReturnDataSizeByGas_or_calldata
         (σ', g', A', z, out)).size ≤
     max maxReturnDataSizeByGas d.size
   rw [← congrArg ByteArray.size hout]
-  change (Θ σ σ₀ A s o r
-      (ToExecute.Precompiled pc) g p v v' d e H blobVersionedHashes blocks w).2.2.2.2.size ≤
-    max maxReturnDataSizeByGas d.size
   rw [theta_precompiled_output_eq σ σ₀ A s o r pc d g p v v' e H blobVersionedHashes blocks w]
   let I : ExecutionEnv :=
     { codeOwner := r, sender := o, source := s, weiValue := v', calldata := d,
@@ -3559,7 +3507,6 @@ lemma call_returnData_size_le_maxReturnDataSizeByGas
     Ethereum.State.incrPC] at h
   repeat split at h
   all_goals
-    try contradiction
     rcases h with ⟨_, hstate⟩
     rw [← hstate]
     simp
@@ -3776,10 +3723,9 @@ lemma create_returnData_size_le_maxReturnDataSizeByGas
     (h : create value offset size salt evmState = .ok (x, state')) :
     state'.machineState.returnData.size ≤ maxReturnDataSizeByGas := by
   unfold create at h
-  simp [bind, Except.bind, pure, Except.pure] at h
+  simp [bind, Except.bind] at h
   repeat' (split at h <;> try simp at h)
   all_goals
-    try contradiction
     rcases h with ⟨_, hstate⟩
     rw [← hstate]
     simp

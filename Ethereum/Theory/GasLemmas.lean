@@ -47,7 +47,7 @@ lemma Ccallgas_lt_Ccall (t r val g σ μ A) :
     split
     · split <;> omega
     · rename_i hneq
-      exact False.elim (hneq rfl)
+      exact False.elim (hneq (by decide) rfl)
   · have hbne : (val != (⟨0⟩ : UInt256)) = true := by
       have hbeq : (val == (⟨0⟩ : UInt256)) = false := by
         by_cases hbeq : val == (⟨0⟩ : UInt256)
@@ -551,7 +551,7 @@ lemma create_gas_le
     (h : create value offset size salt evmState = .ok (x, state')) :
     state'.machineState.gasAvailable.toNat ≤ evmState.machineState.gasAvailable.toNat := by
   unfold create at h
-  simp [bind, Except.bind, pure, Except.pure] at h
+  simp [bind, Except.bind] at h
   repeat' (split at h <;> try simp at h)
   all_goals
     try contradiction
@@ -745,69 +745,69 @@ theorem Z_cost_le {validJumps : Array UInt256} {w : Operation}
     cost ≤ evmState'.machineState.gasAvailable.toNat := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : evmState.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : evmState.machineState.gasAvailable.toNat < memoryExpansionCost evmState w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (evmState.subtractGas (memoryExpansionCost evmState w)).machineState.gasAvailable.toNat <
         C' (evmState.subtractGas (memoryExpansionCost evmState w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set evmState₁ : State := evmState.subtractGas (memoryExpansionCost evmState w)
   by_cases hjump :
       w = Operation.JUMP ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         evmState₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (evmState₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (evmState₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           evmState₁.machineState.returnData.size
-  · rw [if_pos (by simpa [evmState₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       evmState₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [evmState₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬ evmState₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬evmState₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [evmState₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧
         evmState₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [evmState₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ evmState₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [evmState₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hstate : evmState₁ = evmState' := congrArg Prod.fst hp
   have hcost : C' evmState₁ w = cost := congrArg Prod.snd hp
@@ -820,69 +820,69 @@ theorem Z_cost_eq_C' {validJumps : Array UInt256} {w : Operation}
     cost = C' evmState' w := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : evmState.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : evmState.machineState.gasAvailable.toNat < memoryExpansionCost evmState w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (evmState.subtractGas (memoryExpansionCost evmState w)).machineState.gasAvailable.toNat <
         C' (evmState.subtractGas (memoryExpansionCost evmState w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set evmState₁ : State := evmState.subtractGas (memoryExpansionCost evmState w)
   by_cases hjump :
       w = Operation.JUMP ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         evmState₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (evmState₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (evmState₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           evmState₁.machineState.returnData.size
-  · rw [if_pos (by simpa [evmState₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       evmState₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [evmState₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬ evmState₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬evmState₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [evmState₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧
         evmState₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [evmState₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ evmState₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [evmState₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hstate : evmState₁ = evmState' := congrArg Prod.fst hp
   have hcost : C' evmState₁ w = cost := congrArg Prod.snd hp
@@ -896,69 +896,69 @@ theorem Z_cost_pos_of_continues {validJumps : Array UInt256} {w : Operation}
     0 < cost := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : evmState.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : evmState.machineState.gasAvailable.toNat < memoryExpansionCost evmState w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (evmState.subtractGas (memoryExpansionCost evmState w)).machineState.gasAvailable.toNat <
         C' (evmState.subtractGas (memoryExpansionCost evmState w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set evmState₁ : State := evmState.subtractGas (memoryExpansionCost evmState w)
   by_cases hjump :
       w = Operation.JUMP ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         evmState₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (evmState₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (evmState₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           evmState₁.machineState.returnData.size
-  · rw [if_pos (by simpa [evmState₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       evmState₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [evmState₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬ evmState₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬evmState₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [evmState₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧
         evmState₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [evmState₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ evmState₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [evmState₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hcost : C' evmState₁ w = cost := congrArg Prod.snd hp
   rw [← hcost]
@@ -970,69 +970,69 @@ theorem Z_state_gas_le {validJumps : Array UInt256} {w : Operation}
     evmState'.machineState.gasAvailable.toNat ≤ evmState.machineState.gasAvailable.toNat := by
   unfold Z at h
   by_cases hδ : δ w = none
-  · rw [if_pos hδ] at h
+  · rw [ite_eq_left hδ] at h
     contradiction
-  rw [if_neg hδ] at h
+  rw [ite_eq_right hδ] at h
   by_cases hstack : evmState.machineState.stack.length < (δ w).getD 0
-  · rw [if_pos hstack] at h
+  · rw [ite_eq_left hstack] at h
     contradiction
-  rw [if_neg hstack] at h
+  rw [ite_eq_right hstack] at h
   by_cases hcost₁ : evmState.machineState.gasAvailable.toNat < memoryExpansionCost evmState w
-  · rw [if_pos hcost₁] at h
+  · rw [ite_eq_left hcost₁] at h
     contradiction
-  rw [if_neg hcost₁] at h
+  rw [ite_eq_right hcost₁] at h
   by_cases hcost₂ :
       (evmState.subtractGas (memoryExpansionCost evmState w)).machineState.gasAvailable.toNat <
         C' (evmState.subtractGas (memoryExpansionCost evmState w)) w
-  · rw [if_pos (by simpa [State.subtractGas] using hcost₂)] at h
+  · rw [ite_eq_left (by simpa [State.subtractGas] using hcost₂)] at h
     contradiction
-  rw [if_neg (by simpa [State.subtractGas] using hcost₂)] at h
+  rw [ite_eq_right (by simpa [State.subtractGas] using hcost₂)] at h
   set evmState₁ : State := evmState.subtractGas (memoryExpansionCost evmState w)
   by_cases hjump :
       w = Operation.JUMP ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjump)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjump)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjump)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjump)] at h
   by_cases hjumpi :
       w = Operation.JUMPI ∧
         evmState₁.machineState.stack[1]? ≠ some (⟨0⟩ : UInt256) ∧
         Z.notIn evmState₁.machineState.stack[0]? validJumps = true
-  · rw [if_pos (by simpa [evmState₁] using hjumpi)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hjumpi)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hjumpi)] at h
   by_cases hreturndata :
       w = Operation.RETURNDATACOPY ∧
         (evmState₁.machineState.stack.getD 1 (⟨0⟩ : UInt256)).toNat +
             (evmState₁.machineState.stack.getD 2 (⟨0⟩ : UInt256)).toNat >
           evmState₁.machineState.returnData.size
-  · rw [if_pos (by simpa [evmState₁] using hreturndata)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hreturndata)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hreturndata)] at h
   by_cases hoverflow :
       evmState₁.machineState.stack.length - (δ w).getD 0 + (α w).getD 0 > 1024
-  · rw [if_pos (by simpa [evmState₁] using hoverflow)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hoverflow)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hoverflow)] at h
   by_cases hstatic :
       ¬ evmState₁.executionEnv.perm ∧
         (w ∈ ([.CREATE, .CREATE2, .SSTORE, .SELFDESTRUCT, .LOG0, .LOG1, .LOG2,
             .LOG3, .LOG4, .TSTORE] : List Operation) ∨
           (w = .CALL ∧ ¬evmState₁.machineState.stack[2]? = some (⟨0⟩ : UInt256)))
-  · rw [if_pos (by simpa [evmState₁] using hstatic)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hstatic)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hstatic)] at h
   by_cases hsstore :
       w = Operation.SSTORE ∧
         evmState₁.machineState.gasAvailable.toNat ≤ GasConstants.Gcallstipend
-  · rw [if_pos (by simpa [evmState₁] using hsstore)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hsstore)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hsstore)] at h
   by_cases hcreate :
       w.isCreate ∧ evmState₁.machineState.stack[2]?.getD (⟨0⟩ : UInt256) > ⟨49152⟩
-  · rw [if_pos (by simpa [evmState₁] using hcreate)] at h
+  · rw [ite_eq_left (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
     contradiction
-  rw [if_neg (by simpa [evmState₁] using hcreate)] at h
+  rw [ite_eq_right (by simpa [evmState₁, State.subtractGas] using hcreate)] at h
   injection h with hp
   have hstate : evmState₁ = evmState' := congrArg Prod.fst hp
   rw [← hstate]
@@ -1122,9 +1122,9 @@ theorem X_gas_le {fuel : Nat} {validJumps : Array UInt256} {state : State}
             rcases ro with ⟨HaltSuccess.success, o⟩
             cases HaltSuccess.success <;> simp at h
             · cases h
-              simpa using hstepLe
+              simpa [ExecutionResultGas] using hstepLe
             · cases h
-              simpa using hstepLe
+              simpa [ExecutionResultGas] using hstepLe
 
 def XiResultGas :
     ExecutionResult (AccountMap × UInt256 × Substate) →
@@ -1273,45 +1273,51 @@ lemma precompile_PointEval_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     | error e =>
         simp [hgas, hres, dbgTrace]
 
+lemma addr_eq_lit (n : ℕ) (hn : n < AccountAddress.size) (k : ℕ) (hk : k < AccountAddress.size) :
+    ((⟨n, hn⟩ : AccountAddress) = (OfNat.ofNat k : AccountAddress)) ↔ n = k := by
+  constructor
+  · intro h
+    have := congrArg Fin.val h
+    simpa [OfNat.ofNat, Fin.val_ofNat, Nat.mod_eq_of_lt hk] using this
+  · rintro rfl
+    apply Fin.ext
+    simp [OfNat.ofNat, Nat.mod_eq_of_lt hk]
+
 set_option maxRecDepth 65536 in
 lemma precompile_dispatch_match_eq_if {α : Type} (p : AccountAddress)
     (a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 d : α) :
     (match p with
-      | 1 => a1 | 2 => a2 | 3 => a3 | 4 => a4 | 5 => a5
-      | 6 => a6 | 7 => a7 | 8 => a8 | 9 => a9 | 10 => a10
+      | ⟨1, _⟩ => a1 | ⟨2, _⟩ => a2 | ⟨3, _⟩ => a3 | ⟨4, _⟩ => a4 | ⟨5, _⟩ => a5
+      | ⟨6, _⟩ => a6 | ⟨7, _⟩ => a7 | ⟨8, _⟩ => a8 | ⟨9, _⟩ => a9 | ⟨10, _⟩ => a10
       | _ => d) =
     (if p = 1 then a1 else if p = 2 then a2 else if p = 3 then a3
      else if p = 4 then a4 else if p = 5 then a5 else if p = 6 then a6
      else if p = 7 then a7 else if p = 8 then a8 else if p = 9 then a9
      else if p = 10 then a10 else d) := by
-  split <;> try simp_all
-  all_goals
-    have h1 : p ≠ 1 := by assumption
-    have h2 : p ≠ 2 := by assumption
-    have h3 : p ≠ 3 := by assumption
-    have h4 : p ≠ 4 := by assumption
-    have h5 : p ≠ 5 := by assumption
-    have h6 : p ≠ 6 := by assumption
-    have h7 : p ≠ 7 := by assumption
-    have h8 : p ≠ 8 := by assumption
-    have h9 : p ≠ 9 := by assumption
-    have h10 : p ≠ 10 := by assumption
-    simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
+  obtain ⟨n, hn⟩ := p
+  have s : ∀ k, k < 11 → k < AccountAddress.size := fun k hk => by
+    unfold AccountAddress.size; omega
+  simp only [addr_eq_lit n hn 1 (s 1 (by decide)), addr_eq_lit n hn 2 (s 2 (by decide)),
+    addr_eq_lit n hn 3 (s 3 (by decide)), addr_eq_lit n hn 4 (s 4 (by decide)),
+    addr_eq_lit n hn 5 (s 5 (by decide)), addr_eq_lit n hn 6 (s 6 (by decide)),
+    addr_eq_lit n hn 7 (s 7 (by decide)), addr_eq_lit n hn 8 (s 8 (by decide)),
+    addr_eq_lit n hn 9 (s 9 (by decide)), addr_eq_lit n hn 10 (s 10 (by decide))]
+  split <;> simp_all
 
 set_option maxRecDepth 65536 in
 lemma precompile_dispatch_gas_le (p : AccountAddress) (σ : AccountMap)
     (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (match p with
-      | 1 => Ξ_ECREC σ g A I
-      | 2 => Ξ_SHA256 σ g A I
-      | 3 => Ξ_RIP160 σ g A I
-      | 4 => Ξ_ID σ g A I
-      | 5 => Ξ_EXPMOD σ g A I
-      | 6 => Ξ_BN_ADD σ g A I
-      | 7 => Ξ_BN_MUL σ g A I
-      | 8 => Ξ_SNARKV σ g A I
-      | 9 => Ξ_BLAKE2_F σ g A I
-      | 10 => Ξ_PointEval σ g A I
+      | ⟨1, _⟩ => Ξ_ECREC σ g A I
+      | ⟨2, _⟩ => Ξ_SHA256 σ g A I
+      | ⟨3, _⟩ => Ξ_RIP160 σ g A I
+      | ⟨4, _⟩ => Ξ_ID σ g A I
+      | ⟨5, _⟩ => Ξ_EXPMOD σ g A I
+      | ⟨6, _⟩ => Ξ_BN_ADD σ g A I
+      | ⟨7, _⟩ => Ξ_BN_MUL σ g A I
+      | ⟨8, _⟩ => Ξ_SNARKV σ g A I
+      | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
+      | ⟨10, _⟩ => Ξ_PointEval σ g A I
       | _ => default).2.1.toNat ≤ g.toNat := by
   rw [precompile_dispatch_match_eq_if]
   split_ifs

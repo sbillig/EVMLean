@@ -18,7 +18,7 @@ theorem byteArray_toList_eq (b : ByteArray) : b.toList = b.data.toList := by
   intro i r
   induction i, r using ByteArray.toList.loop.induct (bs := b) with
   | case1 i r hlt ih =>
-    rw [ByteArray.toList.loop, if_pos hlt, ih, List.reverse_cons, List.append_assoc]
+    rw [ByteArray.toList.loop, ite_eq_left hlt, ih, List.reverse_cons, List.append_assoc]
     congr 1
     have hi : i < b.data.size := hlt
     have hlen : i < b.data.toList.length := by rw [Array.length_toList]; exact hi
@@ -26,7 +26,7 @@ theorem byteArray_toList_eq (b : ByteArray) : b.toList = b.data.toList := by
       rw [Array.getElem_toList]; exact getElem!_pos b.data i hi
     rw [hget, List.singleton_append, List.getElem_cons_drop]
   | case2 i r hge =>
-    rw [ByteArray.toList.loop, if_neg hge]
+    rw [ByteArray.toList.loop, ite_eq_right hge]
     have : b.data.toList.length ≤ i := by rw [Array.length_toList]; exact Nat.le_of_not_lt hge
     rw [List.drop_eq_nil_of_le this, List.append_nil]
 
@@ -199,6 +199,30 @@ theorem gas_eq (d : ByteArray) :
     by_cases hh : field d (96 + field d 0 32) 32 = 0 <;>
     first | (simp [h, he, hh]; done) | simp [h, he, hh, Nat.lt_of_not_le h]
 
+theorem output_core (ml m b e : ℕ) (hmlt : m < 2 ^ (8 * ml)) :
+    (if (ml == 0 || m == 0) = true then ByteArray.zeroes ml
+    else
+      (if ml ≥ (BE (expMod m b e)).size then ByteArray.zeroes (ml - (BE (expMod m b e)).size)
+        else ByteArray.empty) ++ BE (expMod m b e)) =
+      toBytesBE ml (if m = 0 then 0 else b ^ e % m) := by
+  have zeroes_eq : ByteArray.zeroes ml = toBytesBE ml 0 := by
+    apply ByteArray.ext
+    apply Array.ext
+    · simp [ByteArray.zeroes, toBytesBE]
+    · intro i h1 h2
+      simp [ByteArray.zeroes, toBytesBE]
+  by_cases h0 : ml = 0 ∨ m = 0
+  · have : (ml == 0 || m == 0) = true := by
+      rcases h0 with h | h <;> simp [h]
+    rw [ite_eq_left this, zeroes_eq]
+    rcases h0 with h | h
+    · subst h; apply ByteArray.ext; simp [toBytesBE]
+    · rw [ite_eq_left h]
+  · have : (ml == 0 || m == 0) = false := by simp; omega
+    rw [ite_eq_right (by simp [this]), expMod_eq]
+    have hr : b ^ e % m < 2 ^ (8 * ml) := lt_trans (Nat.mod_lt _ (by omega)) hmlt
+    rw [ite_eq_left (BE_le hr), ite_eq_right (show ¬ m = 0 by omega), pad_BE _ _ hr]
+
 theorem output_eq (d : ByteArray) :
     (if (field d 64 32 == 0 || field d (96 + field d 0 32 + field d 32 32) (field d 64 32) == 0) = true
       then ByteArray.zeroes (field d 64 32)
@@ -210,29 +234,8 @@ theorem output_eq (d : ByteArray) :
             (field d (96 + field d 0 32) (field d 32 32)))).size)
         else ByteArray.empty) ++
       BE (expMod (field d (96 + field d 0 32 + field d 32 32) (field d 64 32))
-        (field d 96 (field d 0 32)) (field d (96 + field d 0 32) (field d 32 32)))) = output d := by
-  simp only [output, modLength, modulus, base, exponent, baseLength, expLength]
-  generalize hml : field d 64 32 = ml
-  generalize hm : field d (96 + field d 0 32 + field d 32 32) ml = m
-  have hmlt : m < 2 ^ (8 * ml) := by rw [← hm]; exact field_lt _ _ _
-  have zeroes_eq : ByteArray.zeroes ml = toBytesBE ml 0 := by
-    apply ByteArray.ext
-    apply Array.ext
-    · simp [ByteArray.zeroes, toBytesBE]
-    · intro i h1 h2
-      simp [ByteArray.zeroes, toBytesBE]
-  by_cases h0 : ml = 0 ∨ m = 0
-  · have : (ml == 0 || m == 0) = true := by
-      rcases h0 with h | h <;> simp [h]
-    rw [if_pos this, zeroes_eq]
-    rcases h0 with h | h
-    · subst h; apply ByteArray.ext; simp [toBytesBE]
-    · rw [if_pos h]
-  · have : (ml == 0 || m == 0) = false := by simp; omega
-    rw [if_neg (by simp [this]), expMod_eq]
-    have hr : field d 96 (field d 0 32) ^ field d (96 + field d 0 32) (field d 32 32) % m <
-        2 ^ (8 * ml) := lt_trans (Nat.mod_lt _ (by omega)) hmlt
-    rw [if_pos (BE_le hr), if_neg (show ¬ m = 0 by omega), pad_BE _ _ hr]
+        (field d 96 (field d 0 32)) (field d (96 + field d 0 32) (field d 32 32)))) = output d :=
+  output_core _ _ _ _ (field_lt _ _ _)
 
 theorem Ξ_EXPMOD_eq (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     Ξ_EXPMOD σ g A I =

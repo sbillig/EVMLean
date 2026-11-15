@@ -88,7 +88,7 @@ theorem step_stop : ∀ (s : State),
     have hgas' :
         ¬ s.machineState.gasAvailable.toNat < GasConstants.Gzero := by
       simpa [Sat256.subNat_zero, UInt256_subzero'] using hgas
-    rw [if_neg hgas']
+    rw [ite_eq_right hgas']
     simp [α, Operation.isCreate]
     by_cases hoverflow : 1024 < s.machineState.stack.length
     · simp [hoverflow]
@@ -4153,6 +4153,7 @@ theorem step_call : ∀ (s : State),
                 Ethereum.State.addAccessedAccount, writeBytes, call, liftM, bind, Bind.bind,
                 Except.bind, Except.pure, Pure.pure, MonadLift.monadLift]
               simp [Stack.push, UInt256_ofNat_1, hdepth_eq]
+              rfl
 
 theorem step_call' : ∀ (s : State),
   let I_b := s.executionEnv.code
@@ -4354,6 +4355,7 @@ theorem step_callcode : ∀ (s : State),
               Ethereum.State.addAccessedAccount, writeBytes, call, liftM, bind, Bind.bind,
               Except.bind, Except.pure, Pure.pure, MonadLift.monadLift]
             simp [Stack.push, UInt256_ofNat_1, hdepth_eq]
+            rfl
 
 theorem step_delegatecall : ∀ (s : State),
   let I_b := s.executionEnv.code
@@ -4493,6 +4495,7 @@ theorem step_delegatecall : ∀ (s : State),
               Ethereum.State.addAccessedAccount, writeBytes, call, liftM, bind, Bind.bind,
               Except.bind, Except.pure, Pure.pure, MonadLift.monadLift]
             simp [Stack.push, UInt256_ofNat_1, hdepth_eq]
+            rfl
 
 theorem step_staticcall : ∀ (s : State),
   let I_b := s.executionEnv.code
@@ -4631,6 +4634,7 @@ theorem step_staticcall : ∀ (s : State),
               Ethereum.State.addAccessedAccount, writeBytes, call, liftM, bind, Bind.bind,
               Except.bind, Except.pure, Pure.pure, MonadLift.monadLift]
             simp [Stack.push, UInt256_ofNat_1, hdepth_eq]
+            rfl
 
 theorem step_create : ∀ (s : State),
   let I_b := s.executionEnv.code
@@ -4870,11 +4874,9 @@ theorem step_create : ∀ (s : State),
                         createState, UInt256_ofNat_1, hdepth_eq, hperm_true, initCode, Iₐ, Iₒ, σ, σ_Iₐ,
                         σStar, createResult, g', hnonce, hnonce_expanded, hDepth, hDepth_expanded, hrefund,
                         hrefund_expanded]
-                      conv_lhs =>
-                        simp [bind, Except.bind]
                       have hDepth_lt := hDepth_expanded.2.1
                       have hDepth_lt' : (↑s.executionEnv.depth : Nat) < 1024 := by
-                        simpa using hDepth_lt
+                        simpa [Fin.lt_def] using hDepth_lt
                       simp [hDepth_lt', hrefund_expanded]
                     ·
                       have hrefund_expanded := hrefund
@@ -4890,7 +4892,7 @@ theorem step_create : ∀ (s : State),
                       have hrefund_expanded_not := not_lt.mpr hrefund_expanded
                       have hDepth_lt := hDepth_expanded.2.1
                       have hDepth_lt' : (↑s.executionEnv.depth : Nat) < 1024 := by
-                        simpa using hDepth_lt
+                        simpa [Fin.lt_def] using hDepth_lt
                       have hDepth_ne : s.executionEnv.depth ≠ 1024 := by
                         omega
                       have hDepth_val_ne : (↑s.executionEnv.depth : Nat) ≠ 1024 := by
@@ -4911,7 +4913,7 @@ theorem step_create : ∀ (s : State),
                           (↑s.executionEnv.depth : Nat) < 1024 ∧
                             (s.machineState.memory.readWithPadding offset.toNat size.toNat).size ≤ 49152) := by
                       intro h
-                      exact hDepth_expanded ⟨h.1, by simpa using h.2.1, h.2.2⟩
+                      exact hDepth_expanded ⟨h.1, by simpa [Fin.lt_def] using h.2.1, h.2.2⟩
                     by_cases hrefund :
                         createState.machineState.gasAvailable.toNat + g'.toNat <
                           L createState.machineState.gasAvailable.toNat
@@ -4926,8 +4928,6 @@ theorem step_create : ∀ (s : State),
                         createState, UInt256_ofNat_1, hdepth_eq, hperm_true, initCode, Iₐ, Iₒ, σ, σ_Iₐ,
                         σStar, createResult, g', hnonce, hnonce_expanded, hDepth, hDepth_expanded, hrefund,
                         hrefund_expanded]
-                      conv_lhs =>
-                        simp [bind, Except.bind]
                       simp [hDepth_expanded, hDepth_expanded_nat, hrefund_expanded]
                     ·
                       have hrefund_expanded := hrefund
@@ -5185,11 +5185,9 @@ theorem step_create2 : ∀ (s : State),
                         createState, UInt256_ofNat_1, hdepth_eq, hperm_true, initCode, ζ, Iₐ, Iₒ, σ, σ_Iₐ,
                         σStar, createResult, g', hnonce, hnonce_expanded, hDepth, hDepth_expanded, hrefund,
                         hrefund_expanded]
-                      conv_lhs =>
-                        simp [bind, Except.bind]
                       have hDepth_lt := hDepth_expanded.2.1
                       have hDepth_lt' : (↑s.executionEnv.depth : Nat) < 1024 := by
-                        simpa using hDepth_lt
+                        simpa [Fin.lt_def] using hDepth_lt
                       simp [hDepth_lt', hrefund_expanded]
                     ·
                       have hrefund_expanded := hrefund
@@ -5205,7 +5203,7 @@ theorem step_create2 : ∀ (s : State),
                       have hrefund_expanded_not := not_lt.mpr hrefund_expanded
                       have hDepth_lt := hDepth_expanded.2.1
                       have hDepth_lt' : (↑s.executionEnv.depth : Nat) < 1024 := by
-                        simpa using hDepth_lt
+                        simpa [Fin.lt_def] using hDepth_lt
                       have hDepth_ne : s.executionEnv.depth ≠ 1024 := by
                         omega
                       have hDepth_val_ne : (↑s.executionEnv.depth : Nat) ≠ 1024 := by
@@ -5226,7 +5224,7 @@ theorem step_create2 : ∀ (s : State),
                           (↑s.executionEnv.depth : Nat) < 1024 ∧
                             (s.machineState.memory.readWithPadding offset.toNat size.toNat).size ≤ 49152) := by
                       intro h
-                      exact hDepth_expanded ⟨h.1, by simpa using h.2.1, h.2.2⟩
+                      exact hDepth_expanded ⟨h.1, by simpa [Fin.lt_def] using h.2.1, h.2.2⟩
                     by_cases hrefund :
                         createState.machineState.gasAvailable.toNat + g'.toNat <
                           L createState.machineState.gasAvailable.toNat
@@ -5241,8 +5239,6 @@ theorem step_create2 : ∀ (s : State),
                         createState, UInt256_ofNat_1, hdepth_eq, hperm_true, initCode, ζ, Iₐ, Iₒ, σ, σ_Iₐ,
                         σStar, createResult, g', hnonce, hnonce_expanded, hDepth, hDepth_expanded, hrefund,
                         hrefund_expanded]
-                      conv_lhs =>
-                        simp [bind, Except.bind]
                       simp [hDepth_expanded, hDepth_expanded_nat, hrefund_expanded]
                     ·
                       have hrefund_expanded := hrefund
@@ -5389,7 +5385,7 @@ theorem step_selfdestruct : ∀ (s : State),
                 gasCost, sdState, Iₐ, r]
               cases hcreated : s.substate.createdAccounts.contains s.executionEnv.codeOwner
               · have hcreated_mem : ¬ s.executionEnv.codeOwner ∈ s.substate.createdAccounts := by
-                  rw [← Batteries.RBSet.contains_iff]
+                  rw [← RBTree.RBSet.contains_iff]
                   simp [hcreated]
                 cases hself :
                     Std.ExtTreeMap.get? s.accountMap s.executionEnv.codeOwner with
@@ -5413,7 +5409,7 @@ theorem step_selfdestruct : ∀ (s : State),
                     · simp [hcreated, hcreated_mem, hneq, sdState, Iₐ, r, hgas0,
                         chargedState, Cselfdestruct, hstack, Sat256.subNat_zero, UInt256_subzero', UInt256_ofNat_1]
               · have hcreated_mem : s.executionEnv.codeOwner ∈ s.substate.createdAccounts := by
-                  rw [← Batteries.RBSet.contains_iff]
+                  rw [← RBTree.RBSet.contains_iff]
                   simp [hcreated]
                 cases hself :
                     Std.ExtTreeMap.get? s.accountMap s.executionEnv.codeOwner with

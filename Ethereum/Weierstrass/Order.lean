@@ -40,7 +40,7 @@ theorem low_neg (hq : 2 < q) {y : ZMod q} (hy : y ≠ 0) : low (-y) ≠ low y :=
   have hodd : q % 2 = 1 := ((Fact.out : q.Prime).eq_two_or_odd).resolve_left (by omega)
   have hlt := ZMod.val_lt y
   have hv : y.val ≠ 0 := by rwa [ne_eq, ZMod.val_eq_zero]
-  rw [low, low, ZMod.neg_val, if_neg hy]
+  rw [low, low, ZMod.neg_val, ite_eq_right hy]
   by_cases h : y.val ≤ (q - 1) / 2 <;> simp [h] <;> omega
 
 /-- A point as an abscissa and the half its ordinate is in. -/
@@ -70,7 +70,7 @@ theorem code_injective (hq : 3 < q) (hb : b ≠ 0) : Function.Injective (code (b
 
 /-- At most `2 q + 1` points: infinity, and two ordinates for each abscissa. -/
 theorem card_le (hq : 3 < q) (hb : b ≠ 0) : Nat.card (short q b).toAffine.Point ≤ 2 * q + 1 := by
-  haveI : NeZero q := ⟨(Fact.out : q.Prime).ne_zero⟩
+  have : NeZero q := ⟨(Fact.out : q.Prime).ne_zero⟩
   have := Nat.card_le_card_of_injective _ (code_injective (b := b) hq hb)
   rw [Nat.card_eq_fintype_card (α := Option _), Fintype.card_option, Fintype.card_prod,
     ZMod.card, Fintype.card_bool] at this
@@ -101,7 +101,7 @@ has no root, makes the group of order `r`. -/
 theorem card_eq (hq : 3 < q) (hb : b ≠ 0) (hroot : ∀ x : ZMod q, x ^ 3 + b ≠ 0) {r : ℕ}
     (hr : r.Prime) (hbound : 2 * q + 1 < 3 * r) {G : (short q b).toAffine.Point} (hG : G ≠ 0)
     (hrG : r • G = 0) : Nat.card (short q b).toAffine.Point = r := by
-  haveI : Fact r.Prime := ⟨hr⟩
+  have : Fact r.Prime := ⟨hr⟩
   have hord : addOrderOf G = r := addOrderOf_eq_prime hrG hG
   obtain ⟨m, hm⟩ := hord ▸ addOrderOf_dvd_natCard G
   have hpos : 0 < Nat.card (short q b).toAffine.Point := Nat.card_pos
@@ -119,7 +119,7 @@ theorem card_eq (hq : 3 < q) (hb : b ≠ 0) (hroot : ∀ x : ZMod q, x ^ 3 + b �
   rcases hm12 with rfl | rfl
   · simpa using hm
   · exfalso
-    haveI : Fact (2 : ℕ).Prime := ⟨Nat.prime_two⟩
+    have : Fact (2 : ℕ).Prime := ⟨Nat.prime_two⟩
     obtain ⟨P, hP⟩ := exists_prime_addOrderOf_dvd_card' (G := (short q b).toAffine.Point) 2
       (by rw [hm]; exact dvd_mul_left _ _)
     have h0 := eq_zero_of_two_nsmul hq hb hroot (P := P) (by rw [← hP]; exact addOrderOf_nsmul_eq_zero P)
@@ -149,7 +149,7 @@ theorem mod_nsmul (k : ℕ) (P : (short q b).toAffine.Point) : (k % r) • P = k
 /-- Every point is a multiple of any point but `0`. -/
 theorem exists_nsmul_eq {G : (short q b).toAffine.Point} (hG : G ≠ 0)
     (P : (short q b).toAffine.Point) : ∃ k < r, k • G = P := by
-  haveI : Fact r.Prime := ⟨hr⟩
+  have : Fact r.Prime := ⟨hr⟩
   have hord : addOrderOf G = r := addOrderOf_eq_prime (nsmul_card hcard G) hG
   have htop : AddSubgroup.zmultiples G = ⊤ :=
     AddSubgroup.eq_top_of_card_eq _ (by rw [Nat.card_zmultiples, hord, hcard])
@@ -189,15 +189,15 @@ theorem slope_phi (x₁ x₂ y₁ y₂ : ZMod q) :
   have hx : β * x₁ = β * x₂ ↔ x₁ = x₂ := mul_right_inj' hβ0
   unfold slope
   by_cases h1 : x₁ = x₂
-  · rw [if_pos (hx.mpr h1), if_pos h1]
+  · rw [ite_eq_left (hx.mpr h1), ite_eq_left h1]
     by_cases h2 : y₁ = (short q b).toAffine.negY (β * x₂) y₂
     · have h2' : y₁ = (short q b).toAffine.negY x₂ y₂ := by simpa [negY, short] using h2
-      rw [if_pos h2, if_pos h2', mul_zero]
+      rw [ite_eq_left h2, ite_eq_left h2', mul_zero]
     · have h2' : ¬ y₁ = (short q b).toAffine.negY x₂ y₂ := by simpa [negY, short] using h2
-      rw [if_neg h2, if_neg h2']
+      rw [ite_eq_right h2, ite_eq_right h2']
       simp only [negY, short]
       ring
-  · rw [if_neg (fun h => h1 (hx.mp h)), if_neg h1]
+  · rw [ite_eq_right (fun h => h1 (hx.mp h)), ite_eq_right h1]
     have hne : x₁ - x₂ ≠ 0 := sub_ne_zero.mpr h1
     field_simp
     linear_combination -(y₁ - y₂) * hβ
