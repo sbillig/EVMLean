@@ -1,2 +1,2 @@
-typing-extensions
-pycryptodome
+# No Python package is needed: no Lean code runs Python. Ethereum/ModexpDiff.py, a test
+# script, uses only the standard library.

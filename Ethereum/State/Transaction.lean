@@ -2,7 +2,7 @@ import Mathlib.Data.List.AList
 
 import Ethereum.UInt256
 import Ethereum.Wheels
-import Ethereum.State.TrieRoot
+import Ethereum.Trie
 import Conform.Wheels
 import Ethereum.State.Substate
 
@@ -138,15 +138,13 @@ def Transaction.type : Transaction → UInt8
   | .dynamic _ => 2
   | .blob _ => 3
 
-def Transaction.toBlobs (t : ℕ × ByteArray) : Option (String × String) := do
-  let rlpᵢ ← RLP (.𝔹 (BE t.1))
-  let rlp := t.2
-  pure (Ethereum.toHex rlpᵢ, Ethereum.toHex rlp)
+/-- The `i`-th transaction's entry in the transaction trie: the RLP of `i`, and the
+transaction's encoding. -/
+def Transaction.trieEntry (t : ℕ × ByteArray) : Option (ByteArray × ByteArray) := do
+  pure (← RLP (.𝔹 (BE t.1)), t.2)
 
 def Transaction.computeTrieRoot (ts : Array ByteArray) : Option ByteArray := do
-  match Array.mapM Transaction.toBlobs ((Array.range ts.size).zip ts) with
-    | none => .none
-    | some ws => (ByteArray.ofBlob (blobComputeTrieRoot ws)).toOption
+  trieRoot (← ((Array.range ts.size).zip ts).mapM Transaction.trieEntry)
 
 structure TransactionReceipt where
   type                     : UInt8     /- R_x -/
@@ -165,16 +163,13 @@ def L_R : TransactionReceipt → 𝕋
     , logSeries.to𝕋
     ]
 
-def TransactionReceipt.toBlobs (w : ℕ × ByteArray) : Option (String × String) := do
-  let rlpᵢ ← RLP (.𝔹 (BE w.1))
-  let rlp ← w.2
-  pure (Ethereum.toHex rlpᵢ, Ethereum.toHex rlp)
+/-- The `i`-th receipt's entry in the receipt trie: the RLP of `i`, and the receipt's
+encoding. -/
+def TransactionReceipt.trieEntry (w : ℕ × ByteArray) : Option (ByteArray × ByteArray) := do
+  pure (← RLP (.𝔹 (BE w.1)), w.2)
 
--- EIP-4895
 def TransactionReceipt.computeTrieRoot (ws : Array ByteArray) : Option ByteArray := do
-  match Array.mapM TransactionReceipt.toBlobs ((Array.range ws.size).zip ws) with
-    | none => .none
-    | some ws => (ByteArray.ofBlob (blobComputeTrieRoot ws)).toOption
+  trieRoot (← ((Array.range ws.size).zip ws).mapM TransactionReceipt.trieEntry)
 
 def TransactionReceipt.toTrieValue (r : TransactionReceipt) : ByteArray :=
   let rlp := Option.get! ∘ RLP ∘ L_R <| r

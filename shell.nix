@@ -6,8 +6,6 @@ in
 pkgs.mkShell {
   packages = with pkgs; [
     elan
-    python312Packages.typing-extensions
-    python312Packages.pycryptodome
     pkgs.openssl
   ];
   shellHook = ''

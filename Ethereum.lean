@@ -8,7 +8,6 @@ import Ethereum.StateOps
 import Ethereum.UInt256
 import Ethereum.Wheels
 import Ethereum.EllipticCurves
-import Ethereum.PerformIO
 
 import Ethereum.Theory.ProgressLemmas
 import Ethereum.Theory.GasLemmas
@@ -56,7 +55,7 @@ import Ethereum.State.SubstateOps
 import Ethereum.State.Transaction
 import Ethereum.State.Withdrawal
 import Ethereum.State.TransactionOps
-import Ethereum.State.TrieRoot
+import Ethereum.Trie
 
 import Ethereum.SpongeHash.Keccak256
 

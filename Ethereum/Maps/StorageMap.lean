@@ -4,7 +4,7 @@ import Std.Data.ExtTreeMap.Lemmas
 import Mathlib.Data.Multiset.Sort
 
 import Ethereum.Wheels
-import Ethereum.State.TrieRoot
+import Ethereum.Trie
 import Ethereum.SpongeHash.Keccak256
 
 
@@ -17,15 +17,12 @@ abbrev Storage : Type := Std.ExtTreeMap UInt256 UInt256 compare
 def Storage.toFinmap (self : Storage) : Finmap (λ _ : UInt256 ↦ UInt256) :=
   self.foldl (init := ∅) λ acc k v ↦ acc.insert (UInt256.ofNat k.1) v
 
-def toBlobs (pair : UInt256 × UInt256) : Option (String × String) := do
-  let kec := KEC pair.1.toByteArray
-  let rlp ← RLP (.𝔹 (BE pair.2.toNat))
-  pure (Ethereum.toHex kec, Ethereum.toHex rlp)
+/-- A slot's entry in the storage trie: the hash of the slot, and the RLP of the value. -/
+def Storage.trieEntry (pair : UInt256 × UInt256) : Option (ByteArray × ByteArray) := do
+  pure (KEC pair.1.toByteArray, ← RLP (.𝔹 (BE pair.2.toNat)))
 
-def computeTrieRoot (storage : Storage) : Option ByteArray :=
-  match Array.mapM toBlobs storage.toArray with
-    | none => .none
-    | some pairs => (ByteArray.ofBlob (blobComputeTrieRoot pairs)).toOption
+def computeTrieRoot (storage : Storage) : Option ByteArray := do
+  trieRoot (← storage.toArray.mapM Storage.trieEntry)
 
 end RemoveLater
 

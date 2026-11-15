@@ -15,7 +15,7 @@ upstream project, see
 [nethermind-changes.md](nethermind-changes.md).
 
 # Requirements
-- Python packages: typing-extensions, pycryptodome
+Lean (through `elan`) only: no Lean code runs Python or another external process.
 
 # Project structure
 
@@ -93,6 +93,11 @@ EthLib's specifications ([ethereum/EthLib](https://github.com/ethereum/EthLib), 
 [`Ethereum/Theory/PointEval.lean`](Ethereum/Theory/PointEval.lean) state their gas and output
 in terms of EthLib's decoders, pairing check and KZG check. EthLib proves properties of those
 definitions (its `SOUNDNESS.md`); EVMLean's theorems use only the definitions.
+
+The roots of the Merkle Patricia tries (the state and storage roots, and the transaction,
+receipt and withdrawal roots) are EthLib's `Trie.root` with `KEC`, through `Ethereum.trieRoot`
+([`Ethereum/Trie.lean`](Ethereum/Trie.lean)). [`Ethereum/TrieRootTests.lean`](Ethereum/TrieRootTests.lean)
+checks it on `ethereum/tests`' `TrieTests` and on generated inputs.
 
 ## Conformance testing
 A git submodule with EVM conformance tests is in:

@@ -186,6 +186,21 @@ the gas; every failure consumes all the gas, so the order is not visible through
 The Python scripts, the Lean wrappers `Ethereum/SNARKV.lean` and `Ethereum/PointEval.lean`, and
 `Ethereum/PrecompileOutput.lean`, which checked the size of their outputs, were removed.
 
+## Trie roots from EthLib
+
+The state, storage, transaction, receipt and withdrawal roots ran
+`Ethereum/EllipticCurvesPy/trie_root.py` (a copy of the execution specs' `trie.py`, with its
+RLP, Keccak and base types, and pycryptodome) through `totallySafePerformIO`, on hex strings
+written to a temporary file. In the logic they were `Inhabited.default`, and the Python failed
+on a trie in which one key is a proper prefix of another (`trie.py` names `Account` and
+`Receipt` without importing them), a panic that left the root empty; no Ethereum trie has such
+keys. `Ethereum.trieRoot` (`Ethereum/Trie.lean`) is now EthLib's `Trie.root` with `KEC`, which
+is transparent Lean and agrees with the Python on every other input tried, and
+`Ethereum/TrieRootTests.lean` checks it. `Ethereum/PerformIO.lean`, `Ethereum/State/TrieRoot.lean`
+and the rest of `Ethereum/EllipticCurvesPy` (also `blake2_f.py`, `blake2.py`, `keccak.py`,
+`sha256.py` and the `alt_bn128.py` chain, which no Lean code called) were removed, with the
+unused `unsafe` helper `report` in `Conform/Wheels.lean`. No Python package is needed any more.
+
 ## Added `Xstep`
 
 The body of the opcode loop was factored into `Xstep`, representing one opcode
