@@ -238,6 +238,17 @@ new `fork` field is `Osaka`; under the default `Cancun` it fails with an invalid
 instruction, so Cancun's behavior is unchanged. The fork rides on the header
 because `Θ`, `Lambda` and `Υ` already pass the header to every nested frame.
 
+## Osaka's MODEXP and P256VERIFY
+
+Under `fork = Osaka`, `Ξ_EXPMOD` fails for a length above 1,024 bytes (EIP-7823) and charges
+EIP-7883's price (`Modexp.gasOsaka`, `Ξ_EXPMOD_eq_osaka`); under `Cancun` it is unchanged
+(`Ξ_EXPMOD_eq`). P256VERIFY (EIP-7951) is EthLib's `p256Verify` as `Ξ_P256VERIFY`. The precompile
+addresses `π`, the initial accessed accounts `A0` and `toExecute` take the fork, so `0x100` is a
+precompile and warm only under `Osaka`, and `Θ`'s dispatch runs P256VERIFY at `0x100` only then.
+`Ethereum/ModexpOsakaTests.lean` and `Ethereum/P256VerifyTests.lean` check go-ethereum's
+`modexp_eip7883.json` and `p256Verify.json`. Osaka's other changes, and Prague's, are not
+modelled; see the README.
+
 ## Added EVM Proof Library
 
 The [`Ethereum/Theory`](Ethereum/Theory/README.md) directory contains the proof

@@ -237,11 +237,65 @@ theorem output_eq (d : ByteArray) :
         (field d 96 (field d 0 32)) (field d (96 + field d 0 32) (field d 32 32)))) = output d :=
   output_core _ _ _ _ (field_lt _ _ _)
 
-theorem Ξ_EXPMOD_eq (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
+/-- MODEXP before Osaka: EIP-198's output at EIP-2565's price, with no bound on the lengths. -/
+theorem Ξ_EXPMOD_eq (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv)
+    (hfork : I.header.fork = .Cancun) :
     Ξ_EXPMOD σ g A I =
       if g.toNat < gas I.calldata then (∅, ⟨0⟩, A, .empty)
       else (σ, g - .ofNat (gas I.calldata), A, output I.calldata) := by
-  simp only [Ξ_EXPMOD, nat_of_slice_eq]
+  simp only [Ξ_EXPMOD, nat_of_slice_eq, hfork, reduceCtorEq, false_and, ↓reduceIte]
   rw [gas_eq, output_eq]
+
+
+theorem gasOsaka_eq (d : ByteArray) :
+    max 500
+      ((if 32 < max (field d 0 32) (field d 64 32) then
+          2 * ((max (field d 0 32) (field d 64 32) + 7) / 8) ^ 2
+        else 16) *
+        max
+          (if (decide (field d 32 32 ≤ 32) &&
+                field d (96 + field d 0 32) (field d 32 32) == 0) = true then 0
+          else if field d 32 32 ≤ 32 then
+            Nat.log 2 (field d (96 + field d 0 32) (field d 32 32))
+          else
+            16 * (field d 32 32 - 32) +
+              if (field d (96 + field d 0 32) 32 != 0) = true then
+                Nat.log 2 (field d (96 + field d 0 32) 32)
+              else 0)
+          1) = gasOsaka d := by
+  simp only [gasOsaka, multiplicationComplexityOsaka, adjustedExpLengthOsaka, expLength,
+    baseLength, modLength, exponent]
+  congr 2
+  by_cases h : field d 32 32 ≤ 32 <;>
+    by_cases he : field d (96 + field d 0 32) (field d 32 32) = 0 <;>
+    by_cases hh : field d (96 + field d 0 32) 32 = 0 <;>
+    simp [h, he, hh]
+
+/-- MODEXP from Osaka: a length above 1,024 bytes fails (EIP-7823); otherwise EIP-198's output at
+EIP-7883's price. -/
+theorem Ξ_EXPMOD_eq_osaka (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv)
+    (hfork : I.header.fork = .Osaka) :
+    Ξ_EXPMOD σ g A I =
+      if ¬ lengthsBounded I.calldata ∨ g.toNat < gasOsaka I.calldata then (∅, ⟨0⟩, A, .empty)
+      else (σ, g - .ofNat (gasOsaka I.calldata), A, output I.calldata) := by
+  simp only [Ξ_EXPMOD, nat_of_slice_eq, hfork, true_and, ↓reduceIte]
+  rw [gasOsaka_eq, output_eq]
+  by_cases hb : lengthsBounded I.calldata
+  · have : ¬ (1024 < field I.calldata 0 32 ∨ 1024 < field I.calldata 32 32 ∨
+        1024 < field I.calldata 64 32) := by
+      unfold lengthsBounded baseLength expLength modLength at hb; omega
+    simp only [this, hb, not_true_eq_false, false_or, ↓reduceIte]
+  · have : 1024 < field I.calldata 0 32 ∨ 1024 < field I.calldata 32 32 ∨
+        1024 < field I.calldata 64 32 := by
+      unfold lengthsBounded baseLength expLength modLength at hb; omega
+    simp only [this, hb, not_false_eq_true, true_or, ↓reduceIte]
+
+/-- At Osaka every length of a call that succeeds is at most 1,024 bytes. -/
+theorem lengthsBounded_of_Ξ_EXPMOD_osaka {σ : AccountMap} {g : UInt256} {A : Substate}
+    {I : ExecutionEnv} (hfork : I.header.fork = .Osaka) (hσ : (Ξ_EXPMOD σ g A I).1 ≠ ∅) :
+    lengthsBounded I.calldata := by
+  rw [Ξ_EXPMOD_eq_osaka σ g A I hfork] at hσ
+  by_contra hb
+  simp [hb] at hσ
 
 end Ethereum

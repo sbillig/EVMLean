@@ -37,11 +37,31 @@ Ethereum/Semantics.lean
 ```
 
 ## Forks
-The model follows Cancun, plus Osaka's `CLZ` (EIP-7939). A block header's
-`fork` field (`Ethereum.Fork`, default `Cancun`) says which rules apply: under
-`Cancun`, `0x1e` is an invalid instruction; under `Osaka` it is `CLZ`. RLP
-encodings do not carry the fork, so decoded blocks are Cancun's, as are the
-conformance tests.
+The model follows Cancun. A block header's `fork` field (`Ethereum.Fork`,
+default `Cancun`) says which rules apply, and `Osaka` adds the execution-layer
+changes of Osaka that lie inside the model:
+
+- `CLZ` (EIP-7939): under `Cancun`, `0x1e` is an invalid instruction.
+- MODEXP (EIP-7823, EIP-7883): a base, exponent or modulus longer than 1,024
+  bytes fails, and the price is EIP-7883's (`Ξ_EXPMOD_eq_osaka`).
+- P256VERIFY (EIP-7951) at `0x100`: a precompile (`π .Osaka`, so also warm from
+  the start of a transaction), run by `Ξ_P256VERIFY`, EthLib's `p256Verify`
+  (`Ξ_P256VERIFY_eq`).
+
+**`Osaka` therefore means Cancun plus these three items, not the Osaka fork.**
+Osaka builds on Prague, and none of Prague's changes is modelled: no BLS12-381
+precompiles (EIP-2537), set-code transactions and delegations (EIP-7702),
+history contract (EIP-2935), calldata floor price (EIP-7623), requests
+(EIP-6110, EIP-7002, EIP-7251, EIP-7685) or Prague's blob schedule and price
+(EIP-7691); the blob base fee is Cancun's. Osaka's other changes are outside the
+model, which takes a valid transaction in a valid block: the transaction gas
+limit cap (EIP-7825), the block size limit (EIP-7934), the blob base fee bound
+(EIP-7918), the per-transaction blob limit and PeerDAS (EIP-7594), blob
+parameter forks (EIP-7892), and networking and RPC (EIP-7642, EIP-7910).
+`Ethereum/Theory/Forks.lean` states that under `Cancun` the precompile
+addresses, `A0`, `toExecute` and `Θ`'s dispatch are Cancun's, and
+`Ξ_EXPMOD_eq` states Cancun's MODEXP. RLP encodings do not carry the fork, so
+decoded blocks are Cancun's, as are the conformance tests.
 
 ## Cryptographic trust boundaries
 

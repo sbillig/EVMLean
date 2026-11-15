@@ -4,15 +4,18 @@ import Ethereum.SpongeHash.Keccak256
 
 import Ethereum.UInt256
 import Ethereum.Wheels
+import Ethereum.State.BlockHeader
 
 namespace Ethereum
 
 /--
-  Precompiled contract addresses.
-  (142) `π ≡ {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}`
+  Precompiled contract addresses of a fork.
+  (142) `π ≡ {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}` for Cancun; Osaka adds P256VERIFY at `0x100`
+  (EIP-7951).
 -/
-def π : RBTree.RBSet AccountAddress compare :=
-  RBTree.RBSet.ofList ((List.range 11).tail.map (Fin.ofNat _)) compare
+def π (fork : Fork) : RBTree.RBSet AccountAddress compare :=
+  let cancun := (List.range 11).tail.map (Fin.ofNat _)
+  RBTree.RBSet.ofList (if fork = .Osaka then cancun ++ [Fin.ofNat _ 0x100] else cancun) compare
 
 inductive ToExecute where
   | Code (code : ByteArray)

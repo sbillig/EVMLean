@@ -1,6 +1,8 @@
 import Ethereum.Semantics
 import Ethereum.Wheels
 import Batteries.Recycling.RBTree.Lemmas
+import Ethereum.Theory.Modexp
+import Ethereum.Theory.P256Verify
 
 /-!
 # Account locality
@@ -252,7 +254,7 @@ inductive account_change_consistent (acc : AccountAddress) : AccountMap → Acco
     {blobVersionedHashes : List ByteArray}
     {blocks : ProcessedBlocks}
     {w z : Bool} :
-    Θ σ σ₀ A s o acc (toExecute σ acc) g p v v' d e H blobVersionedHashes blocks w = (σ', g', A', z, o')
+    Θ σ σ₀ A s o acc (toExecute H.fork σ acc) g p v v' d e H blobVersionedHashes blocks w = (σ', g', A', z, o')
     → account_change_consistent acc (sendEth acc s v z σ) σ'
 
   | by_own_code_from_start
@@ -267,7 +269,7 @@ inductive account_change_consistent (acc : AccountAddress) : AccountMap → Acco
     {blocks : ProcessedBlocks}
     {w z : Bool} :
     Θ σ σ₀ A s o acc
-        (toExecute σ acc) g p v v' d e H blobVersionedHashes blocks w =
+        (toExecute H.fork σ acc) g p v v' d e H blobVersionedHashes blocks w =
       (σ', g', A', z, o')
     → account_change_consistent acc σ σ'
 
@@ -486,7 +488,7 @@ private lemma account_changes_consistent_of_call_except_recipient_succ_depth
       ((evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate)
       (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
       (AccountAddress.ofUInt256 recipient)
-      (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+      (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
       (UInt256.ofNat
         (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
           value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -498,7 +500,7 @@ private lemma account_changes_consistent_of_call_except_recipient_succ_depth
       ((evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate)
       (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
       (AccountAddress.ofUInt256 recipient)
-      (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+      (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
       (UInt256.ofNat
         (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
           value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -2260,30 +2262,9 @@ private lemma precompile_ID_accountMap_empty_or_self
 private lemma precompile_EXPMOD_accountMap_empty_or_self
     (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (Ξ_EXPMOD σ g A I).1 = ∅ ∨ (Ξ_EXPMOD σ g A I).1 = σ := by
-  unfold Ξ_EXPMOD
-  set data := I.calldata
-  set base_length := nat_of_slice data 0 32
-  set exp_length := nat_of_slice data 32 32
-  set modulus_length := nat_of_slice data 64 32
-  set exp := fun _ : Unit => nat_of_slice data (96 + base_length) exp_length
-  set gᵣ :=
-    (let multiplication_complexity := fun x y => ((max x y + 7) / 8) ^ 2
-     let adjusted_exp_length :=
-      if exp_length ≤ 32 && exp () == 0 then
-        0
-      else if exp_length ≤ 32 then
-        Nat.log 2 (exp ())
-      else
-        let length_part := 8 * (exp_length - 32)
-        let bits_part :=
-          let exp_head := nat_of_slice data (96 + base_length) 32
-          if 32 < exp_length ∧ exp_head != 0 then Nat.log 2 exp_head else 0
-        length_part + bits_part
-     let iterations := max adjusted_exp_length 1
-     let G_quaddivisor := 3
-     max 200 (multiplication_complexity base_length modulus_length * iterations / G_quaddivisor))
-  simp only
-  repeat' (first | split | simp)
+  cases hfork : I.header.fork with
+  | Cancun => rw [Ξ_EXPMOD_eq σ g A I hfork]; split <;> simp
+  | Osaka => rw [Ξ_EXPMOD_eq_osaka σ g A I hfork]; split <;> simp
 
 private lemma precompile_BN_ADD_accountMap_empty_or_self
     (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
@@ -2331,6 +2312,12 @@ private lemma precompile_PointEval_accountMap_empty_or_self
   · exact Or.inr rfl
   · exact Or.inl rfl
 
+private lemma precompile_P256VERIFY_accountMap_empty_or_self
+    (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
+    (Ξ_P256VERIFY σ g A I).1 = ∅ ∨ (Ξ_P256VERIFY σ g A I).1 = σ := by
+  rw [Ξ_P256VERIFY_eq]
+  split <;> simp
+
 private lemma precompiled_Theta_accountMap_eq
     (σ σ₀ : AccountMap)
     (A : Substate)
@@ -2361,6 +2348,7 @@ private lemma precompiled_Theta_accountMap_eq
         | ⟨8, _⟩ => Ξ_SNARKV σ₁ g A I
         | ⟨9, _⟩ => Ξ_BLAKE2_F σ₁ g A I
         | ⟨10, _⟩ => Ξ_PointEval σ₁ g A I
+        | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ₁ g A I else default
         | _ => default
        if result.1 == ∅ then σ else result.1) := by
   unfold Θ sendEth
@@ -2381,6 +2369,7 @@ private lemma precompiled_result_accountMap_empty_or_self
       | ⟨8, _⟩ => Ξ_SNARKV σ g A I
       | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
       | ⟨10, _⟩ => Ξ_PointEval σ g A I
+      | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ g A I else default
       | _ => default
      result.1) = ∅ ∨
     (let result : AccountMap × UInt256 × Substate × ByteArray :=
@@ -2395,6 +2384,7 @@ private lemma precompiled_result_accountMap_empty_or_self
       | ⟨8, _⟩ => Ξ_SNARKV σ g A I
       | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
       | ⟨10, _⟩ => Ξ_PointEval σ g A I
+      | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ g A I else default
       | _ => default
      result.1) = σ := by
   repeat split
@@ -2411,6 +2401,10 @@ private lemma precompiled_result_accountMap_empty_or_self
     | exact precompile_BLAKE2_F_accountMap_empty_or_self σ g A I
     | exact precompile_PointEval_accountMap_empty_or_self σ g A I
     | exact Or.inl rfl
+    | (dsimp only
+       split
+       · exact precompile_P256VERIFY_accountMap_empty_or_self σ g A I
+       · exact Or.inl rfl)
 
 private lemma Xstep_invalid : ∀ (s : State),
     let I_b := s.executionEnv.code
@@ -2450,9 +2444,9 @@ private lemma Xi_invalid_singleton_ne_success
 theorem account_changes_consistent_of_precompiled_Theta :
     ∀ σ' g' A' z o',
     Θ σ σ₀ A s o r
-        (toExecute σ r) g p v v' d e H blobVersionedHashes blocks w =
+        (toExecute H.fork σ r) g p v v' d e H blobVersionedHashes blocks w =
       (σ', g', A', z, o') →
-    toExecute σ r = .Precompiled pc →
+    toExecute H.fork σ r = .Precompiled pc →
     ∀ acc, account_changes_consistent acc σ σ'
     := by
   intros σ' g' A' z o' hTheta hPrecomp acc
@@ -2708,7 +2702,7 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                       (A := Aᵢ) (s := sᵢ) (o := oᵢ) (r := default) (g := gᵢ) (p := pᵢ)
                       (v := vᵢ) (v' := default) (d := default) (i := iᵢ) (ζ := ζᵢ)
                       (H := Hᵢ) (w := wᵢ)
-                      aᵢ (toExecute σᵢ default) σ'ᵢ g'ᵢ A'ᵢ zᵢ o'ᵢ eᵢ heᵢ).2
+                      aᵢ (toExecute Hᵢ.fork σᵢ default) σ'ᵢ g'ᵢ A'ᵢ zᵢ o'ᵢ eᵢ heᵢ).2
                       hLambdaᵢ acc
                 apply account_changes_consistent_trans
                 · exact account_changes_consistent_sendEth_prelude acc r s v true σ
@@ -2758,7 +2752,7 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
                     (A := Aᵢ) (s := sᵢ) (o := oᵢ) (r := default) (g := gᵢ) (p := pᵢ)
                     (v := vᵢ) (v' := default) (d := default) (i := iᵢ) (ζ := ζᵢ)
                     (H := Hᵢ) (w := wᵢ)
-                    aᵢ (toExecute σᵢ default) σ'ᵢ g'ᵢ A'ᵢ zᵢ o'ᵢ eᵢ heᵢ).2
+                    aᵢ (toExecute Hᵢ.fork σᵢ default) σ'ᵢ g'ᵢ A'ᵢ zᵢ o'ᵢ eᵢ heᵢ).2
                     hLambdaᵢ acc
               apply account_changes_consistent_trans
               · exact account_changes_consistent_sendEthCreate_prelude acc a s v true σ
@@ -2842,7 +2836,7 @@ theorem account_changes_consistent_except_owner_of_Theta_and_Lambda :
 theorem account_changes_consistent_of_Theta :
     ∀ σ' g' A' z o' e,
     Θ σ σ₀ A s o r
-        (toExecute σ r) g p v v' d e H blobVersionedHashes blocks w =
+        (toExecute H.fork σ r) g p v v' d e H blobVersionedHashes blocks w =
       (σ', g', A', z, o') →
     ∀ acc, account_changes_consistent acc σ σ'
     := by
@@ -2857,7 +2851,7 @@ theorem account_changes_consistent_of_Theta :
       (σ := σ) (σ₀ := σ₀) (A := A) (s := s) (o := o) (r := r)
       (g := g) (p := p) (v := v) (v' := v') (d := d) (i := default) (ζ := none)
       (H := H) (w := w)
-      default (toExecute σ r) σ' g' A' z o' e).1 hTheta acc hacc
+      default (toExecute H.fork σ r) σ' g' A' z o' e).1 hTheta acc hacc
 
 theorem account_changes_consistent_weak_of_Theta :
     ∀ c σ' g' A' z o' e,
@@ -2887,7 +2881,7 @@ theorem account_changes_consistent_weak_of_Lambda :
     (σ := σ) (σ₀ := σ₀) (A := A) (s := s) (o := o) (r := default)
     (g := g) (p := p) (v := v) (v' := default) (d := default) (i := i) (ζ := ζ)
     (H := H) (w := w)
-    a (toExecute σ default) σ' g' A' z o' e).2 hLambda acc
+    a (toExecute H.fork σ default) σ' g' A' z o' e).2 hLambda acc
 
 theorem account_changes_consistent_weak_of_Theta_and_Lambda :
     ∀ a c σ' g' A' z o' e,

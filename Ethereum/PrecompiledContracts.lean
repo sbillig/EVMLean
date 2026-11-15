@@ -15,6 +15,7 @@ import Ethereum.BN_MUL
 import Ethereum.BLAKE2
 import EthLib.Execution.Evm.Precompiles.AltBn128
 import EthLib.Execution.Evm.Precompiles.PointEvaluation
+import EthLib.Execution.Evm.Precompiles.P256Verify
 
 
 open Ethereum
@@ -133,6 +134,8 @@ def expModAux (m : ℕ) (a : ℕ) (c : ℕ) : ℕ → ℕ
 /-- `b ^ n mod m` by square-and-multiply, the base a natural number of any size. -/
 def expMod (m b n : ℕ) : ℕ := expModAux m 1 (b % m) n
 
+/-- MODEXP at `0x05`: EIP-198, priced by EIP-2565. From Osaka (the header's `fork`) a length
+above 1,024 bytes fails (EIP-7823) and the price is EIP-7883's. -/
 def Ξ_EXPMOD
   (σ : AccountMap)
   (g : UInt256)
@@ -149,7 +152,30 @@ def Ξ_EXPMOD
   -- We don't want to call `nat_of_slice` unless we need it
   let exp := λ () ↦ nat_of_slice data (96 + base_length) exp_length
 
+  -- EIP-7823: from Osaka, a length above 1,024 bytes fails before any gas is charged.
+  if I.header.fork = .Osaka ∧ (1024 < base_length ∨ 1024 < exp_length ∨ 1024 < modulus_length)
+  then (∅, ⟨0⟩, A, .empty) else
+
   let gᵣ :=
+    if I.header.fork = .Osaka then
+      -- EIP-7883: a complexity of at least 16, 16 iterations per exponent byte beyond the
+      -- first 32, no divisor, and at least 500.
+      let multiplication_complexity x y :=
+        if 32 < max x y then 2 * ((max x y + 7) / 8) ^ 2 else 16
+      let adjusted_exp_length :=
+        if exp_length ≤ 32 && exp () == 0 then
+          0
+        else
+          if exp_length ≤ 32 then
+            Nat.log 2 (exp ())
+          else
+            let length_part := 16 * (exp_length - 32)
+            let bits_part :=
+              let exp_head := nat_of_slice data (96 + base_length) 32
+              if exp_head != 0 then Nat.log 2 exp_head else 0
+            length_part + bits_part
+      max 500 (multiplication_complexity base_length modulus_length * max adjusted_exp_length 1)
+    else
     let multiplication_complexity x y := ((max x y + 7) / 8) ^ 2
     let adjusted_exp_length :=
       if exp_length ≤ 32 && exp () == 0 then
@@ -289,4 +315,20 @@ def Ξ_PointEval
   match EthLib.Execution.Evm.Precompiles.PointEvaluation.pointEvaluation I.calldata g.toNat with
     | .ok o =>
       (σ, g - .ofNat EthLib.Execution.Evm.Precompiles.PointEvaluation.GAS_POINT_EVALUATION, A, o)
+    | .error _ => (∅, ⟨0⟩, A, .empty)
+
+/-- P256VERIFY at `0x100` (EIP-7951, from Osaka; `Θ` dispatches to it only then), as EthLib's
+`p256Verify`: 6,900 gas, and an output of 1 as a 32-byte word for 160 bytes of call data that hold
+a valid secp256r1 signature, empty otherwise. Only too little gas fails. -/
+def Ξ_P256VERIFY
+  (σ : AccountMap)
+  (g : UInt256)
+  (A : Substate)
+  (I : ExecutionEnv)
+    :
+  (AccountMap × UInt256 × Substate × ByteArray)
+:=
+  match EthLib.Execution.Evm.Precompiles.P256Verify.p256Verify I.calldata g.toNat with
+    | .ok o =>
+      (σ, g - .ofNat EthLib.Execution.Evm.Precompiles.P256Verify.GAS_P256VERIFY, A, o)
     | .error _ => (∅, ⟨0⟩, A, .empty)

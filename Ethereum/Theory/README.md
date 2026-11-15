@@ -39,7 +39,15 @@ component.
   definitions and the specifications in `Ethereum/BN254/Spec.lean`.
 
 - [`Modexp.lean`](Modexp.lean) states the MODEXP precompile `Ξ_EXPMOD` in terms of the
-  specification of EIP-198 and EIP-2565 in `Ethereum/Modexp/Spec.lean`.
+  specification in `Ethereum/Modexp/Spec.lean`: EIP-198 and EIP-2565 under `Cancun`
+  (`Ξ_EXPMOD_eq`), with EIP-7823's bound and EIP-7883's price under `Osaka`
+  (`Ξ_EXPMOD_eq_osaka`).
+
+- [`P256Verify.lean`](P256Verify.lean) states the P256VERIFY precompile `Ξ_P256VERIFY`
+  (EIP-7951) in terms of EthLib's input checks and secp256r1 ECDSA verification.
+
+- [`Forks.lean`](Forks.lean) states that under `Cancun` the precompile addresses, the
+  initial accessed accounts and `Θ`'s dispatch are Cancun's.
 
 - [`AccountLocality.lean`](AccountLocality.lean) develops relations describing
   which changes to an account are consistent with EVM execution and carries

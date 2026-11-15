@@ -298,30 +298,9 @@ theorem precompile_ID_accountMap_empty_or_self
 theorem precompile_EXPMOD_accountMap_empty_or_self
     (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (Ξ_EXPMOD σ g A I).1 = ∅ ∨ (Ξ_EXPMOD σ g A I).1 = σ := by
-  unfold Ξ_EXPMOD
-  set data := I.calldata
-  set base_length := nat_of_slice data 0 32
-  set exp_length := nat_of_slice data 32 32
-  set modulus_length := nat_of_slice data 64 32
-  set exp := fun _ : Unit => nat_of_slice data (96 + base_length) exp_length
-  set gᵣ :=
-    (let multiplication_complexity := fun x y => ((max x y + 7) / 8) ^ 2
-     let adjusted_exp_length :=
-      if exp_length ≤ 32 && exp () == 0 then
-        0
-      else if exp_length ≤ 32 then
-        Nat.log 2 (exp ())
-      else
-        let length_part := 8 * (exp_length - 32)
-        let bits_part :=
-          let exp_head := nat_of_slice data (96 + base_length) 32
-          if 32 < exp_length ∧ exp_head != 0 then Nat.log 2 exp_head else 0
-        length_part + bits_part
-     let iterations := max adjusted_exp_length 1
-     let G_quaddivisor := 3
-     max 200 (multiplication_complexity base_length modulus_length * iterations / G_quaddivisor))
-  simp only
-  repeat' (first | split | simp)
+  cases hfork : I.header.fork with
+  | Cancun => rw [Ξ_EXPMOD_eq σ g A I hfork]; split <;> simp
+  | Osaka => rw [Ξ_EXPMOD_eq_osaka σ g A I hfork]; split <;> simp
 
 theorem precompile_BN_ADD_accountMap_empty_or_self
     (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
@@ -369,6 +348,12 @@ theorem precompile_PointEval_accountMap_empty_or_self
   · exact Or.inr rfl
   · exact Or.inl rfl
 
+theorem precompile_P256VERIFY_accountMap_empty_or_self
+    (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
+    (Ξ_P256VERIFY σ g A I).1 = ∅ ∨ (Ξ_P256VERIFY σ g A I).1 = σ := by
+  rw [Ξ_P256VERIFY_eq]
+  split <;> simp
+
 theorem precompiled_result_accountMap_empty_or_self
     (pc : AccountAddress) (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (let result : AccountMap × UInt256 × Substate × ByteArray :=
@@ -383,6 +368,7 @@ theorem precompiled_result_accountMap_empty_or_self
       | ⟨8, _⟩ => Ξ_SNARKV σ g A I
       | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
       | ⟨10, _⟩ => Ξ_PointEval σ g A I
+      | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ g A I else default
       | _ => default
      result.1) = ∅ ∨
     (let result : AccountMap × UInt256 × Substate × ByteArray :=
@@ -397,6 +383,7 @@ theorem precompiled_result_accountMap_empty_or_self
       | ⟨8, _⟩ => Ξ_SNARKV σ g A I
       | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
       | ⟨10, _⟩ => Ξ_PointEval σ g A I
+      | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ g A I else default
       | _ => default
      result.1) = σ := by
   repeat split
@@ -413,6 +400,10 @@ theorem precompiled_result_accountMap_empty_or_self
     | exact precompile_BLAKE2_F_accountMap_empty_or_self σ g A I
     | exact precompile_PointEval_accountMap_empty_or_self σ g A I
     | exact Or.inl rfl
+    | (dsimp only
+       split
+       · exact precompile_P256VERIFY_accountMap_empty_or_self σ g A I
+       · exact Or.inl rfl)
 
 theorem precompiled_Theta_accountMap_eq
     (σ σ₀ : AccountMap)
@@ -444,6 +435,7 @@ theorem precompiled_Theta_accountMap_eq
         | ⟨8, _⟩ => Ξ_SNARKV σ₁ g A I
         | ⟨9, _⟩ => Ξ_BLAKE2_F σ₁ g A I
         | ⟨10, _⟩ => Ξ_PointEval σ₁ g A I
+        | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ₁ g A I else default
         | _ => default
        if result.1 == ∅ then σ else result.1) := by
   unfold Θ sendEth
@@ -1213,7 +1205,7 @@ lemma call_static_stateStorageStateEq_at_depth
         (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -1225,7 +1217,7 @@ lemma call_static_stateStorageStateEq_at_depth
           (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
           (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
           (AccountAddress.ofUInt256 recipient)
-          (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+          (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
           (UInt256.ofNat
             (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
               value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -1239,7 +1231,7 @@ lemma call_static_stateStorageStateEq_at_depth
         ((evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate)
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -2181,7 +2173,7 @@ lemma call_static_stateStaticStateEq_at_depth
         (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -2193,7 +2185,7 @@ lemma call_static_stateStaticStateEq_at_depth
           (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
           (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
           (AccountAddress.ofUInt256 recipient)
-          (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+          (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
           (UInt256.ofNat
             (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
               value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -2207,7 +2199,7 @@ lemma call_static_stateStaticStateEq_at_depth
         ((evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate)
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -3037,7 +3029,7 @@ lemma call_static_stateStorageStateEq
         (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -3049,7 +3041,7 @@ lemma call_static_stateStorageStateEq
           (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
           (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
           (AccountAddress.ofUInt256 recipient)
-          (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+          (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
           (UInt256.ofNat
             (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
               value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -3099,7 +3091,7 @@ lemma call_static_stateStaticStateEq
         (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
         (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
         (AccountAddress.ofUInt256 recipient)
-        (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -3111,7 +3103,7 @@ lemma call_static_stateStaticStateEq
           (evmState.addAccessedAccount (AccountAddress.ofUInt256 t)).substate
           (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
           (AccountAddress.ofUInt256 recipient)
-          (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+          (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
           (UInt256.ofNat
             (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
               value gas evmState.accountMap evmState.machineState evmState.substate))

@@ -2,7 +2,7 @@ import Ethereum.PrecompiledContracts
 import Ethereum.Modexp.Spec
 
 /-!
-Test vectors for the MODEXP precompile `Ξ_EXPMOD`: go-ethereum's
+Test vectors for the MODEXP precompile `Ξ_EXPMOD` in a Cancun block: go-ethereum's
 `core/vm/testdata/precompiles/modexp_eip2565.json`, each with its EIP-2565 gas and its output.
 The checks run when this module is built (`lake build Ethereum.ModexpTests`); the library does
 not import it. `Ethereum/ModexpDiff.py` compares the precompile with Python's `pow` on generated

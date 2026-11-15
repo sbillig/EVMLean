@@ -1,6 +1,8 @@
 import Ethereum.Semantics
 import Ethereum.Theory.SNARKV
 import Ethereum.Theory.PointEval
+import Ethereum.Theory.Modexp
+import Ethereum.Theory.P256Verify
 
 namespace Ethereum
 
@@ -1197,39 +1199,19 @@ lemma precompile_ID_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
 
 lemma precompile_EXPMOD_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_EXPMOD σ g A I).2.1.toNat ≤ g.toNat := by
-  unfold Ξ_EXPMOD
-  set foo : Nat :=
-    ((max (nat_of_slice I.calldata 0 32) (nat_of_slice I.calldata 64 32) + 7) / 8) ^ 2 *
-      max
-        (if
-            nat_of_slice I.calldata 32 32 ≤ 32 ∧
-              nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32)
-                (nat_of_slice I.calldata 32 32) = 0 then
-            0
-          else if nat_of_slice I.calldata 32 32 ≤ 32 then
-            Nat.log 2
-              (nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32)
-                (nat_of_slice I.calldata 32 32))
-          else
-            8 * (nat_of_slice I.calldata 32 32 - 32) +
-              if
-                  32 < nat_of_slice I.calldata 32 32 ∧
-                    ¬ nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32) 32 = 0 then
-                Nat.log 2 (nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32) 32)
-              else 0)
-        1 /
-      3
-  by_cases hgas : g.toNat < 200 ∨ g.toNat < foo
-  · simp [hgas, foo]
-  · have hle : max 200 foo ≤ g.toNat := by
-      have h200 : ¬ g.toNat < 200 := by
-        intro h
-        exact hgas (Or.inl h)
-      have hfoo : ¬ g.toNat < foo := by
-        intro h
-        exact hgas (Or.inr h)
-      omega
-    simp [hgas, foo, UInt256.toNat_sub_ofNat_le hle]
+  cases hfork : I.header.fork with
+  | Cancun =>
+    rw [Ξ_EXPMOD_eq σ g A I hfork]
+    split
+    · simp
+    · rename_i hgas
+      exact UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)
+  | Osaka =>
+    rw [Ξ_EXPMOD_eq_osaka σ g A I hfork]
+    split
+    · simp
+    · rename_i hgas
+      exact UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt fun h => hgas (Or.inr h))
 
 lemma precompile_BN_ADD_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_BN_ADD σ g A I).2.1.toNat ≤ g.toNat := by
@@ -1288,6 +1270,14 @@ lemma precompile_PointEval_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     · exact UInt256.toNat_sub_ofNat_le (by omega)
     · simp
 
+lemma precompile_P256VERIFY_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
+    (I : ExecutionEnv) : (Ξ_P256VERIFY σ g A I).2.1.toNat ≤ g.toNat := by
+  rw [Ξ_P256VERIFY_eq]
+  split
+  · simp
+  · rename_i hgas
+    exact UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)
+
 lemma addr_eq_lit (n : ℕ) (hn : n < AccountAddress.size) (k : ℕ) (hk : k < AccountAddress.size) :
     ((⟨n, hn⟩ : AccountAddress) = (OfNat.ofNat k : AccountAddress)) ↔ n = k := by
   constructor
@@ -1300,26 +1290,29 @@ lemma addr_eq_lit (n : ℕ) (hn : n < AccountAddress.size) (k : ℕ) (hk : k < A
 
 set_option maxRecDepth 65536 in
 lemma precompile_dispatch_match_eq_if {α : Type} (p : AccountAddress)
-    (a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 d : α) :
+    (a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a256 d : α) :
     (match p with
       | ⟨1, _⟩ => a1 | ⟨2, _⟩ => a2 | ⟨3, _⟩ => a3 | ⟨4, _⟩ => a4 | ⟨5, _⟩ => a5
       | ⟨6, _⟩ => a6 | ⟨7, _⟩ => a7 | ⟨8, _⟩ => a8 | ⟨9, _⟩ => a9 | ⟨10, _⟩ => a10
+      | ⟨256, _⟩ => a256
       | _ => d) =
     (if p = 1 then a1 else if p = 2 then a2 else if p = 3 then a3
      else if p = 4 then a4 else if p = 5 then a5 else if p = 6 then a6
      else if p = 7 then a7 else if p = 8 then a8 else if p = 9 then a9
-     else if p = 10 then a10 else d) := by
+     else if p = 10 then a10 else if p = 256 then a256 else d) := by
   obtain ⟨n, hn⟩ := p
-  have s : ∀ k, k < 11 → k < AccountAddress.size := fun k hk => by
+  have s : ∀ k, k < 257 → k < AccountAddress.size := fun k hk => by
     unfold AccountAddress.size; omega
   simp only [addr_eq_lit n hn 1 (s 1 (by decide)), addr_eq_lit n hn 2 (s 2 (by decide)),
     addr_eq_lit n hn 3 (s 3 (by decide)), addr_eq_lit n hn 4 (s 4 (by decide)),
     addr_eq_lit n hn 5 (s 5 (by decide)), addr_eq_lit n hn 6 (s 6 (by decide)),
     addr_eq_lit n hn 7 (s 7 (by decide)), addr_eq_lit n hn 8 (s 8 (by decide)),
-    addr_eq_lit n hn 9 (s 9 (by decide)), addr_eq_lit n hn 10 (s 10 (by decide))]
+    addr_eq_lit n hn 9 (s 9 (by decide)), addr_eq_lit n hn 10 (s 10 (by decide)),
+    addr_eq_lit n hn 256 (s 256 (by decide))]
   split <;> simp_all
 
 set_option maxRecDepth 65536 in
+set_option maxHeartbeats 1000000 in
 lemma precompile_dispatch_gas_le (p : AccountAddress) (σ : AccountMap)
     (g : UInt256) (A : Substate) (I : ExecutionEnv) :
     (match p with
@@ -1333,6 +1326,7 @@ lemma precompile_dispatch_gas_le (p : AccountAddress) (σ : AccountMap)
       | ⟨8, _⟩ => Ξ_SNARKV σ g A I
       | ⟨9, _⟩ => Ξ_BLAKE2_F σ g A I
       | ⟨10, _⟩ => Ξ_PointEval σ g A I
+      | ⟨256, _⟩ => if I.header.fork = Fork.Osaka then Ξ_P256VERIFY σ g A I else default
       | _ => default).2.1.toNat ≤ g.toNat := by
   rw [precompile_dispatch_match_eq_if]
   split_ifs
@@ -1346,6 +1340,9 @@ lemma precompile_dispatch_gas_le (p : AccountAddress) (σ : AccountMap)
   · exact precompile_SNARKV_gas_le _ _ _ _
   · exact precompile_BLAKE2_F_gas_le _ _ _ _
   · exact precompile_PointEval_gas_le _ _ _ _
+  · exact precompile_P256VERIFY_gas_le _ _ _ _
+  · change (default : UInt256).toNat ≤ g.toNat
+    simp
   · change (default : UInt256).toNat ≤ g.toNat
     simp
 
@@ -1397,7 +1394,7 @@ lemma call_gas_decreases {gasCost : Nat}
         (s := AccountAddress.ofUInt256 source)
         (o := evmState.executionEnv.sender)
         (r := AccountAddress.ofUInt256 recipient)
-        (c := toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (c := toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (g := UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -1414,7 +1411,7 @@ lemma call_gas_decreases {gasCost : Nat}
               (evmState.substate.addAccessedAccount (AccountAddress.ofUInt256 t))
               (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
               (AccountAddress.ofUInt256 recipient)
-              (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+              (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
               (UInt256.ofNat
                 (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
                   value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -1441,7 +1438,7 @@ lemma call_gas_decreases {gasCost : Nat}
         (s := AccountAddress.ofUInt256 source)
         (o := evmState.executionEnv.sender)
         (r := AccountAddress.ofUInt256 recipient)
-        (c := toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+        (c := toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
         (g := UInt256.ofNat
           (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
             value gas evmState.accountMap evmState.machineState evmState.substate))
@@ -1458,7 +1455,7 @@ lemma call_gas_decreases {gasCost : Nat}
               (evmState.substate.addAccessedAccount (AccountAddress.ofUInt256 t))
               (AccountAddress.ofUInt256 source) evmState.executionEnv.sender
               (AccountAddress.ofUInt256 recipient)
-              (toExecute evmState.accountMap (AccountAddress.ofUInt256 t))
+              (toExecute evmState.executionEnv.header.fork evmState.accountMap (AccountAddress.ofUInt256 t))
               (UInt256.ofNat
                 (Ccallgas (AccountAddress.ofUInt256 t) (AccountAddress.ofUInt256 recipient)
                   value gas evmState.accountMap evmState.machineState evmState.substate))

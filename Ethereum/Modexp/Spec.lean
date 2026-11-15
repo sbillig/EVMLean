@@ -3,7 +3,7 @@ import Ethereum.Wheels
 
 /-!
 A specification of the MODEXP precompile (address `0x05`) of EIP-198, priced by EIP-2565
-(Berlin onward; EVMLean targets Cancun).
+(Berlin to Prague), and from Osaka bounded by EIP-7823 and priced by EIP-7883.
 
 The call data is read as if extended with zero bytes. Its first three 32-byte big-endian words
 are the lengths, in bytes, of the base, the exponent and the modulus; the three numbers follow,
@@ -53,5 +53,35 @@ def adjustedExpLength (d : ByteArray) : ℕ :=
 /-- **EIP-2565**: `max(200, multiplication_complexity * iteration_count / 3)`. -/
 def gas (d : ByteArray) : ℕ :=
   max 200 (multiplicationComplexity (baseLength d) (modLength d) * max (adjustedExpLength d) 1 / 3)
+
+/-! ## Osaka: EIP-7823 bounds and EIP-7883 pricing -/
+
+/-- **EIP-7823** (from Osaka): each of the three lengths is at most 1,024 bytes. A call with a
+longer one fails, consuming all the gas. -/
+def lengthsBounded (d : ByteArray) : Prop :=
+  baseLength d ≤ 1024 ∧ expLength d ≤ 1024 ∧ modLength d ≤ 1024
+
+instance (d : ByteArray) : Decidable (lengthsBounded d) := by
+  unfold lengthsBounded; infer_instance
+
+/-- EIP-7883's multiplication complexity: 16 up to 32 bytes, `2 * ceil(max(x, y) / 8) ^ 2`
+above. -/
+def multiplicationComplexityOsaka (x y : ℕ) : ℕ :=
+  if 32 < max x y then 2 * ((max x y + 7) / 8) ^ 2 else 16
+
+/-- EIP-7883's adjusted exponent length: as EIP-2565's, with 16 in place of 8 for each exponent
+byte beyond the first 32. -/
+def adjustedExpLengthOsaka (d : ByteArray) : ℕ :=
+  if expLength d ≤ 32 then
+    if exponent d = 0 then 0 else Nat.log 2 (exponent d)
+  else
+    let head := field d (96 + baseLength d) 32
+    16 * (expLength d - 32) + if head = 0 then 0 else Nat.log 2 head
+
+/-- **EIP-7883** (from Osaka): `max(500, multiplication_complexity * iteration_count)`, with no
+divisor. -/
+def gasOsaka (d : ByteArray) : ℕ :=
+  max 500 (multiplicationComplexityOsaka (baseLength d) (modLength d) *
+    max (adjustedExpLengthOsaka d) 1)
 
 end Ethereum.Modexp

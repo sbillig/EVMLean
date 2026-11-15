@@ -4039,7 +4039,7 @@ theorem step_call : ∀ (s : State),
                 Θ (blobVersionedHashes := s.executionEnv.blobVersionedHashes)
                   (blocks := s.executionEnv.blocks) (σ := σ) (σ₀ := s.σ₀) (A := Astar)
                   (s := source) (o := s.executionEnv.sender) (r := recipient)
-                  (c := toExecute σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
+                  (c := toExecute s.executionEnv.header.fork σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
                   (v := value) (v' := value) (d := i) (e := Iₑ + 1)
                   (H := s.executionEnv.header) (w := s.executionEnv.perm)
               else
@@ -4188,7 +4188,7 @@ theorem step_call' : ∀ (s : State),
                 Θ (blobVersionedHashes := s.executionEnv.blobVersionedHashes)
                   (blocks := s.executionEnv.blocks) (σ := σ) (σ₀ := s.σ₀) (A := Astar)
                   (s := source) (o := s.executionEnv.sender) (r := recipient)
-                  (c := toExecute σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
+                  (c := toExecute s.executionEnv.header.fork σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
                   (v := value) (v' := value) (d := i) (e := Iₑ + 1)
                   (H := s.executionEnv.header) (w := s.executionEnv.perm)
               else
@@ -4248,7 +4248,7 @@ theorem step_callcode : ∀ (s : State),
                 Θ (blobVersionedHashes := s.executionEnv.blobVersionedHashes)
                   (blocks := s.executionEnv.blocks) (σ := σ) (σ₀ := s.σ₀) (A := Astar)
                   (s := source) (o := s.executionEnv.sender) (r := recipient)
-                  (c := toExecute σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
+                  (c := toExecute s.executionEnv.header.fork σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
                   (v := value) (v' := value) (d := i) (e := Iₑ + 1)
                   (H := s.executionEnv.header) (w := s.executionEnv.perm)
               else
@@ -4391,7 +4391,7 @@ theorem step_delegatecall : ∀ (s : State),
                 Θ (blobVersionedHashes := s.executionEnv.blobVersionedHashes)
                   (blocks := s.executionEnv.blocks) (σ := σ) (σ₀ := s.σ₀) (A := Astar)
                   (s := source) (o := s.executionEnv.sender) (r := recipient)
-                  (c := toExecute σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
+                  (c := toExecute s.executionEnv.header.fork σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
                   (v := value) (v' := value') (d := i) (e := Iₑ + 1)
                   (H := s.executionEnv.header) (w := s.executionEnv.perm)
               else
@@ -4530,7 +4530,7 @@ theorem step_staticcall : ∀ (s : State),
                 Θ (blobVersionedHashes := s.executionEnv.blobVersionedHashes)
                   (blocks := s.executionEnv.blocks) (σ := σ) (σ₀ := s.σ₀) (A := Astar)
                   (s := source) (o := s.executionEnv.sender) (r := recipient)
-                  (c := toExecute σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
+                  (c := toExecute s.executionEnv.header.fork σ tAddr) (g := .ofNat callgas) (p := .ofNat s.executionEnv.gasPrice)
                   (v := value) (v' := value) (d := i) (e := Iₑ + 1)
                   (H := s.executionEnv.header) (w := false)
               else

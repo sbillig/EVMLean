@@ -5,8 +5,9 @@ namespace Ethereum
 
 /--
 The fork whose rules a block follows, which the chain's configuration determines from the block.
-EVMLean implements Cancun; of Osaka it implements only `CLZ` (EIP-7939), an invalid instruction
-in Cancun.
+EVMLean implements Cancun. `Osaka` adds three of Osaka's changes, and nothing of Prague, which
+Osaka builds on: `CLZ` (EIP-7939), MODEXP's bound and price (EIP-7823, EIP-7883), and P256VERIFY
+at `0x100` (EIP-7951). See the README.
 -/
 inductive Fork where
   | Cancun

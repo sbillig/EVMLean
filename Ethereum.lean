@@ -24,6 +24,8 @@ import Ethereum.Theory.BLAKE2
 import Ethereum.Theory.Modexp
 import Ethereum.Theory.SNARKV
 import Ethereum.Theory.PointEval
+import Ethereum.Theory.P256Verify
+import Ethereum.Theory.Forks
 
 import Ethereum.SHA256
 import Ethereum.RIP160

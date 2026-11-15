@@ -180,7 +180,7 @@ def call
               (s  := source)
               (o  := evmState.executionEnv.sender)          -- Iₒ in Θ(.., Iₒ, ..)
               (r  := recipient)                             -- t in Θ(.., t, ..)
-              (c  := toExecute σ t)
+              (c  := toExecute evmState.executionEnv.header.fork σ t)
               (g  := .ofNat callgas)
               (p  := .ofNat evmState.executionEnv.gasPrice) -- Iₚ in Θ(.., Iₚ, ..)
               (v  := value)
@@ -1053,6 +1053,7 @@ def Θ (σ  : AccountMap)
           | ⟨8, _⟩  => Ξ_SNARKV σ₁ g A I
           | ⟨9, _⟩  => Ξ_BLAKE2_F σ₁ g A I
           | ⟨10, _⟩ => Ξ_PointEval σ₁ g A I
+          | ⟨256, _⟩ => if I.header.fork = .Osaka then Ξ_P256VERIFY σ₁ g A I else default
           | _ => default
       | ToExecute.Code _ =>
         match Ξ σ₁ σ₀ g A I with
@@ -1131,7 +1132,7 @@ def Υ
     let eₛ ← Eₛ.toList
     pure (Eₐ, eₛ)
   let a := -- (80)
-    A0.accessedAccounts.insert S_T
+    (A0 H.fork).accessedAccounts.insert S_T
       |>.insert H.beneficiary
       |>.union <| RBTree.RBSet.ofList (accessList.map Prod.fst) compare
   -- (81)
@@ -1141,7 +1142,7 @@ def Υ
       | some t => a.insert t
       | none => a
   let AStar := -- (77)
-    { A0 with accessedAccounts := AStarₐ, accessedStorageKeys := RBTree.RBSet.ofList AStar_K Substate.storageKeysCmp}
+    { A0 H.fork with accessedAccounts := AStarₐ, accessedStorageKeys := RBTree.RBSet.ofList AStar_K Substate.storageKeysCmp}
   let (/- provisional state -/ σ_P, g', A, z) ← -- (76)
     match T.base.recipient with
       | none => do
@@ -1173,7 +1174,7 @@ def Υ
             S_T
             S_T
             t
-            (toExecute σ₀ t)
+            (toExecute H.fork σ₀ t)
             g
             p
             T.base.value
