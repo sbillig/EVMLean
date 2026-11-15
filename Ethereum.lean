@@ -22,6 +22,7 @@ import Ethereum.Theory.RIP160
 import Ethereum.Theory.BN254
 import Ethereum.Theory.SHA256
 import Ethereum.Theory.BLAKE2
+import Ethereum.Theory.Modexp
 
 import Ethereum.SHA256
 import Ethereum.RIP160
@@ -67,3 +68,4 @@ import Ethereum.Weierstrass.Cube
 import Ethereum.BN254.Spec
 import Ethereum.BN254.Proofs
 import Ethereum.BN254.Order
+import Ethereum.Modexp.Spec

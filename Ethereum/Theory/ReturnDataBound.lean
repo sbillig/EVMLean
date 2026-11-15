@@ -2830,10 +2830,10 @@ lemma expModAux_lt {m : Nat} (hm : 0 < m) :
           · apply ih (k.succ / 2)
             exact Nat.div_lt_self (Nat.succ_pos k) (by decide : 1 < 2)
 
-lemma expMod_lt {m : Nat} (hm : 0 < m) (b : UInt256) (n : Nat) :
+lemma expMod_lt {m : Nat} (hm : 0 < m) (b : Nat) (n : Nat) :
     expMod m b n < m := by
   unfold expMod
-  exact expModAux_lt hm n 1 b.toNat
+  exact expModAux_lt hm n 1 (b % m)
 
 private def expmodVariableCost (data : ByteArray) : Nat :=
   let base_length := nat_of_slice data 0 32
@@ -2866,11 +2866,11 @@ lemma BE_expMod_size_le_modulus_length
     (hmod :
       0 < nat_of_slice data (96 + base_length + exp_length) modulus_length) :
     (BE (expMod (nat_of_slice data (96 + base_length + exp_length) modulus_length)
-      (.ofNat (nat_of_slice data 96 base_length))
+      (nat_of_slice data 96 base_length)
       (nat_of_slice data (96 + base_length) exp_length))).size ≤ modulus_length := by
   have hmodlt := nat_of_slice_lt data (96 + base_length + exp_length) modulus_length
   exact BE_le (Nat.lt_trans
-    (expMod_lt hmod (.ofNat (nat_of_slice data 96 base_length))
+    (expMod_lt hmod (nat_of_slice data 96 base_length)
       (nat_of_slice data (96 + base_length) exp_length))
     hmodlt)
 
@@ -2972,13 +2972,13 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
         simp [hz]
       have hmod_pos : 0 < modulus := Nat.pos_of_ne_zero hmod_ne
       have hbase_size :
-          (BE (expMod modulus (.ofNat (nat_of_slice data 96 base_length))
+          (BE (expMod modulus (nat_of_slice data 96 base_length)
             (nat_of_slice data (96 + base_length) exp_length))).size ≤ modulus_length := by
         simpa [data, base_length, exp_length, modulus_length, modulus] using
           BE_expMod_size_le_modulus_length data base_length exp_length modulus_length hmod_pos
       by_cases hpad :
           modulus_length ≥
-            (BE (expMod modulus (.ofNat (nat_of_slice data 96 base_length))
+            (BE (expMod modulus (nat_of_slice data 96 base_length)
               (nat_of_slice data (96 + base_length) exp_length))).size
       · simp [Ξ_EXPMOD, hgasImpl, data, base_length, exp_length,
           modulus_length, modulus, hzero, hpad]
@@ -2986,10 +2986,10 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
         have hzero_size :
             ((OfNat.ofNat modulus_length : USize) -
               (OfNat.ofNat
-                (BE (expMod modulus (.ofNat (nat_of_slice data 96 base_length))
+                (BE (expMod modulus (nat_of_slice data 96 base_length)
                   (nat_of_slice data (96 + base_length) exp_length))).size : USize)).toNat ≤
               modulus_length -
-                (BE (expMod modulus (.ofNat (nat_of_slice data 96 base_length))
+                (BE (expMod modulus (nat_of_slice data 96 base_length)
                   (nat_of_slice data (96 + base_length) exp_length))).size :=
           USize.toNat_ofBitVec_sub_ofNat_le hbase_size
         have hzero_size' :
@@ -2999,7 +2999,7 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
                   (nat_of_slice I.calldata
                     (96 + nat_of_slice I.calldata 0 32 + nat_of_slice I.calldata 32 32)
                     (nat_of_slice I.calldata 64 32))
-                  (.ofNat (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32)))
+                  (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32))
                   (nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32)
                     (nat_of_slice I.calldata 32 32)))).size : USize)).toNat ≤
               nat_of_slice I.calldata 64 32 -
@@ -3007,7 +3007,7 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
                   (nat_of_slice I.calldata
                     (96 + nat_of_slice I.calldata 0 32 + nat_of_slice I.calldata 32 32)
                     (nat_of_slice I.calldata 64 32))
-                  (.ofNat (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32)))
+                  (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32))
                   (nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32)
                     (nat_of_slice I.calldata 32 32)))).size := by
           simpa [data, base_length, exp_length, modulus_length, modulus] using hzero_size
@@ -3016,7 +3016,7 @@ lemma precompile_EXPMOD_output_size_le_modulus_length
               (nat_of_slice I.calldata
                 (96 + nat_of_slice I.calldata 0 32 + nat_of_slice I.calldata 32 32)
                 (nat_of_slice I.calldata 64 32))
-              (.ofNat (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32)))
+              (nat_of_slice I.calldata 96 (nat_of_slice I.calldata 0 32))
               (nat_of_slice I.calldata (96 + nat_of_slice I.calldata 0 32)
                 (nat_of_slice I.calldata 32 32)))).size ≤
               nat_of_slice I.calldata 64 32 := by

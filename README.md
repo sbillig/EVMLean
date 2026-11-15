@@ -81,6 +81,11 @@ specification and the implementation. BLAKE2 F is specified in
 with EIP-152's input format; a faster implementation of its rounds is proved
 equal to the specification and runs in compiled code through a `@[csimp]` lemma.
 
+MODEXP is specified in [`Ethereum/Modexp/Spec.lean`](Ethereum/Modexp/Spec.lean): EIP-198's
+input format and `base ^ exponent mod modulus` on natural numbers, written to the modulus'
+length, with EIP-2565's gas. `Ξ_EXPMOD_eq` ([`Ethereum/Theory/Modexp.lean`](Ethereum/Theory/Modexp.lean))
+states the precompile in terms of it; the implementation computes by square-and-multiply.
+
 The remaining cryptographic precompiles (SNARKV and point evaluation) still use
 external implementations. Their
 Lean wrappers pass successful results through

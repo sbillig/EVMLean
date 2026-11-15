@@ -130,7 +130,8 @@ def expModAux (m : ℕ) (a : ℕ) (c : ℕ) : ℕ → ℕ
     else
       expModAux m (a % m)     (c * c % m) (n / 2)
 
-def expMod (m : ℕ) (b : UInt256) (n : ℕ) : ℕ := expModAux m 1 b.toNat n
+/-- `b ^ n mod m` by square-and-multiply, the base a natural number of any size. -/
+def expMod (m b n : ℕ) : ℕ := expModAux m 1 (b % m) n
 
 def Ξ_EXPMOD
   (σ : AccountMap)
@@ -180,7 +181,7 @@ def Ξ_EXPMOD
       else
         let base := nat_of_slice data 96 base_length
         let exp := nat_of_slice data (96 + base_length) exp_length
-        let expmod_base := BE (expMod modulus (.ofNat base) exp)
+        let expmod_base := BE (expMod modulus base exp)
         let expmod_zeroes :=
           if modulus_length ≥ expmod_base.size then
             ByteArray.zeroes (modulus_length - expmod_base.size)
