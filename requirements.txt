@@ -1,4 +1,2 @@
 typing-extensions
 pycryptodome
-eth-typing
-py-ecc

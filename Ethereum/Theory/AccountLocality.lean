@@ -2310,10 +2310,8 @@ private lemma precompile_SNARKV_accountMap_empty_or_self
     (Ξ_SNARKV σ g A I).1 = ∅ ∨ (Ξ_SNARKV σ g A I).1 = σ := by
   simp only [Ξ_SNARKV]
   split
+  · exact Or.inr rfl
   · exact Or.inl rfl
-  · split
-    · exact Or.inr rfl
-    · exact Or.inl rfl
 
 private lemma precompile_BLAKE2_F_accountMap_empty_or_self
     (σ : AccountMap) (g : UInt256) (A : Substate) (I : ExecutionEnv) :
@@ -2330,10 +2328,8 @@ private lemma precompile_PointEval_accountMap_empty_or_self
     (Ξ_PointEval σ g A I).1 = ∅ ∨ (Ξ_PointEval σ g A I).1 = σ := by
   simp only [Ξ_PointEval]
   split
+  · exact Or.inr rfl
   · exact Or.inl rfl
-  · split
-    · exact Or.inr rfl
-    · exact Or.inl rfl
 
 private lemma precompiled_Theta_accountMap_eq
     (σ σ₀ : AccountMap)

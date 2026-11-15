@@ -1,4 +1,6 @@
 import Ethereum.Semantics
+import Ethereum.Theory.SNARKV
+import Ethereum.Theory.PointEval
 
 namespace Ethereum
 
@@ -1255,14 +1257,14 @@ lemma precompile_BN_MUL_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
 
 lemma precompile_SNARKV_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_SNARKV σ g A I).2.1.toNat ≤ g.toNat := by
-  unfold Ξ_SNARKV
-  by_cases hgas : g.toNat < 34000 * (I.calldata.size / 192) + 45000
-  · simp [hgas]
-  · cases hres : SNARKV I.calldata with
-    | ok o =>
-        simp [hgas, hres, UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)]
-    | error e =>
-        simp [hgas, hres, dbgTrace]
+  rw [Ξ_SNARKV_eq]
+  dsimp only
+  split
+  · simp
+  · rename_i hgas
+    split
+    · exact UInt256.toNat_sub_ofNat_le (by omega)
+    · simp
 
 lemma precompile_BLAKE2_F_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_BLAKE2_F σ g A I).2.1.toNat ≤ g.toNat := by
@@ -1277,14 +1279,14 @@ lemma precompile_BLAKE2_F_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
 
 lemma precompile_PointEval_gas_le (σ : AccountMap) (g : UInt256) (A : Substate)
     (I : ExecutionEnv) : (Ξ_PointEval σ g A I).2.1.toNat ≤ g.toNat := by
-  unfold Ξ_PointEval
-  by_cases hgas : g.toNat < 50000
-  · simp [hgas]
-  · cases hres : PointEval I.calldata with
-    | ok o =>
-        simp [hgas, hres, UInt256.toNat_sub_ofNat_le (Nat.le_of_not_gt hgas)]
-    | error e =>
-        simp [hgas, hres, dbgTrace]
+  rw [Ξ_PointEval_eq]
+  dsimp only
+  split
+  · simp
+  · rename_i hgas
+    split
+    · exact UInt256.toNat_sub_ofNat_le (by omega)
+    · simp
 
 lemma addr_eq_lit (n : ℕ) (hn : n < AccountAddress.size) (k : ℕ) (hk : k < AccountAddress.size) :
     ((⟨n, hn⟩ : AccountAddress) = (OfNat.ofNat k : AccountAddress)) ↔ n = k := by

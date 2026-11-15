@@ -173,19 +173,18 @@ proves the precompile equal to it. `Ethereum/ModexpTests.lean` checks go-ethereu
 (gas and output), and `Ethereum/ModexpDiff.py` compares the precompile with Python's `pow` on
 generated inputs.
 
-## Checked External Precompile Outputs
+## ECPAIRING and point evaluation from EthLib
 
-The other externally implemented cryptographic precompiles remain opaque. A
-transparent Lean boundary in `Ethereum/PrecompileOutput.lean` now accepts a
-successful external result only when it has the prescribed size. The checks
-cover the SNARKV output at 32 bytes and the point evaluation output at 64 bytes. An external implementation that returns a malformed length is treated
-as an error rather than allowing that value into the EVM semantics.
-
-These checks let `Ethereum/Theory/ReturnDataBound.lean` prove its precompile
-return-size bounds without custom axioms about the outputs of C or
-process-backed implementations. The checks constrain output shape only; the
-cryptographic correctness of those external implementations remains outside
-the Lean proof.
+ECPAIRING (`0x08`) and the point evaluation precompile (`0x0a`) ran
+`Ethereum/EllipticCurvesPy/snarkv.py` and `point_evaluation.py` through `totallySafePerformIO`,
+so in the logic they returned `Inhabited.default`, and compiled code depended on Python and
+`py_ecc`. They are now EthLib's `ecpairing` (for Cancun, `Fork.dencun`) and `pointEvaluation`,
+which are transparent Lean, and `Ξ_SNARKV_eq` and `Ξ_PointEval_eq` (`Ethereum/Theory`) state
+the precompiles' gas and output. EthLib checks the length of the point evaluation input before
+the gas; every failure consumes all the gas, so the order is not visible through `Ξ`.
+`Ethereum/SNARKVTests.lean` and `Ethereum/PointEvalTests.lean` check go-ethereum's vectors.
+The Python scripts, the Lean wrappers `Ethereum/SNARKV.lean` and `Ethereum/PointEval.lean`, and
+`Ethereum/PrecompileOutput.lean`, which checked the size of their outputs, were removed.
 
 ## Added `Xstep`
 

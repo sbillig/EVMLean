@@ -23,13 +23,14 @@ import Ethereum.Theory.BN254
 import Ethereum.Theory.SHA256
 import Ethereum.Theory.BLAKE2
 import Ethereum.Theory.Modexp
+import Ethereum.Theory.SNARKV
+import Ethereum.Theory.PointEval
 
 import Ethereum.SHA256
 import Ethereum.RIP160
 import Ethereum.RIPEMD160
 import Ethereum.BN_ADD
 import Ethereum.BN_MUL
-import Ethereum.SNARKV
 import Ethereum.BLAKE2
 
 import Ethereum.Data.Stack

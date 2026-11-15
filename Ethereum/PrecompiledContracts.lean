@@ -12,9 +12,9 @@ import Ethereum.SHA256
 import Ethereum.RIP160
 import Ethereum.BN_ADD
 import Ethereum.BN_MUL
-import Ethereum.SNARKV
 import Ethereum.BLAKE2
-import Ethereum.PointEval
+import EthLib.Execution.Evm.Precompiles.AltBn128
+import EthLib.Execution.Evm.Precompiles.PointEvaluation
 
 
 open Ethereum
@@ -238,6 +238,8 @@ def Ξ_BN_MUL
         -- (σ, g - gᵣ, A, .empty)
         (∅, ⟨0⟩, A, .empty)
 
+/-- ECPAIRING at `0x08` (EIP-197, at the EIP-1108 prices), as EthLib's `ecpairing` for Cancun
+(`Fork.dencun`). Every failure consumes all the gas, out of gas included. -/
 def Ξ_SNARKV
   (σ : AccountMap)
   (g : UInt256)
@@ -247,18 +249,10 @@ def Ξ_SNARKV
   (AccountMap × UInt256 × Substate × ByteArray)
 :=
   let d := I.calldata
-  let k := d.size / 192
-  let gᵣ : ℕ := 34000 * k + 45000
-
-  if g.toNat < gᵣ then
-    (∅, ⟨0⟩, A, .empty)
-  else
-    let o := SNARKV d
-    match o with
-      | .ok o => (σ, g - .ofNat gᵣ, A, o)
-      | .error e =>
-        dbg_trace s!"Ξ_SNARKV failed: {e}"
-        (∅, ⟨0⟩, A, .empty)
+  match EthLib.Execution.Evm.Precompiles.AltBn128.ecpairing .dencun d g.toNat with
+    | .ok o =>
+      (σ, g - .ofNat (EthLib.Execution.Evm.Precompiles.AltBn128.ecpairingGas .dencun d.size), A, o)
+    | .error _ => (∅, ⟨0⟩, A, .empty)
 
 def Ξ_BLAKE2_F
   (σ : AccountMap)
@@ -281,6 +275,9 @@ def Ξ_BLAKE2_F
         dbg_trace "Ξ_BLAKE2_F failed"
         (∅, ⟨0⟩, A, .empty)
 
+/-- The point evaluation precompile at `0x0a` (EIP-4844), as EthLib's `pointEvaluation`. Every
+failure consumes all the gas, so the order in which EthLib checks the length and the gas is not
+visible here. -/
 def Ξ_PointEval
   (σ : AccountMap)
   (g : UInt256)
@@ -289,15 +286,7 @@ def Ξ_PointEval
     :
   (AccountMap × UInt256 × Substate × ByteArray)
 :=
-  let d := I.calldata
-  let gᵣ : ℕ := 50000
-
-  if g.toNat < gᵣ then
-    (∅, ⟨0⟩, A, .empty)
-  else
-    let o := PointEval d
-    match o with
-      | .ok o => (σ, g - .ofNat gᵣ, A, o)
-      | .error e =>
-        dbg_trace s!"Ξ_PointEval failed: {e}"
-        (∅, ⟨0⟩, A, .empty)
+  match EthLib.Execution.Evm.Precompiles.PointEvaluation.pointEvaluation I.calldata g.toNat with
+    | .ok o =>
+      (σ, g - .ofNat EthLib.Execution.Evm.Precompiles.PointEvaluation.GAS_POINT_EVALUATION, A, o)
+    | .error _ => (∅, ⟨0⟩, A, .empty)

@@ -8,8 +8,6 @@ pkgs.mkShell {
     elan
     python312Packages.typing-extensions
     python312Packages.pycryptodome
-    python312Packages.eth-typing
-    python312Packages.py-ecc
     pkgs.openssl
   ];
   shellHook = ''

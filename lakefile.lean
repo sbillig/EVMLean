@@ -4,6 +4,10 @@ open Lake DSL System
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"@"v4.35.0"
 
+-- The alt_bn128 pairing check and the point evaluation precompile.
+require EthLib from git
+  "https://github.com/ethereum/EthLib.git"@"9964e6a4308d06c656aefb35794c5edd9a948f9d"
+
 package «evmlean» {
   moreLeanArgs := #["-DautoImplicit=false", "-s", "65536"]
   moreServerOptions := #[⟨`autoImplicit, false⟩]

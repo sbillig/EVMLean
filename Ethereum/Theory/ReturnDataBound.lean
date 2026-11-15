@@ -3134,24 +3134,17 @@ lemma precompile_BN_MUL_output_size_le_maxReturnDataSizeByGas_or_calldata
     | error e =>
         simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
-lemma SNARKV_ok_output_size {d s : ByteArray} :
-    SNARKV d = .ok s → s.size = 32 := by
-  intro h
-  unfold SNARKV at h
-  exact checkedPrecompileOutput_ok_size h
-
 lemma precompile_SNARKV_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
     (Ξ_SNARKV σ g A I).2.2.2.size ≤ max maxReturnDataSizeByGas I.calldata.size := by
-  by_cases hgas : g.toNat < 34000 * (I.calldata.size / 192) + 45000
-  · simp [Ξ_SNARKV, hgas, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-  · simp [Ξ_SNARKV, hgas]
-    cases hres : SNARKV I.calldata with
-    | ok s =>
-        have hs := SNARKV_ok_output_size hres
-        simp [hs, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-    | error e =>
-        simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+  rw [Ξ_SNARKV_eq]
+  dsimp only
+  split
+  · simp [maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+  · split
+    · simp only [ecpairingWord_size]
+      simp [maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+    · simp [maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
 lemma BLAKE2_ok_output_size {d s : ByteArray} :
     BLAKE2.precompile d = some s → s.size = 64 := by
@@ -3177,24 +3170,16 @@ lemma precompile_BLAKE2_F_output_size_le_maxReturnDataSizeByGas_or_calldata
     | none =>
         simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
-lemma PointEval_ok_output_size {d s : ByteArray} :
-    PointEval d = .ok s → s.size = 64 := by
-  intro h
-  unfold PointEval at h
-  exact checkedPrecompileOutput_ok_size h
-
 lemma precompile_PointEval_output_size_le_maxReturnDataSizeByGas_or_calldata
     {σ : AccountMap} {g : UInt256} {A : Substate} {I : ExecutionEnv} :
     (Ξ_PointEval σ g A I).2.2.2.size ≤ max maxReturnDataSizeByGas I.calldata.size := by
-  by_cases hgas : g.toNat < 50000
-  · simp [Ξ_PointEval, hgas, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-  · simp [Ξ_PointEval, hgas]
-    cases hres : PointEval I.calldata with
-    | ok s =>
-        have hs := PointEval_ok_output_size hres
-        simp [hs, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
-    | error e =>
-        simp [dbgTrace, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+  rw [Ξ_PointEval_eq]
+  dsimp only
+  split
+  · simp [maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+  · split
+    · simp [output_size, maxReturnDataSizeByGas, maxReturnDataWordsByGas]
+    · simp [maxReturnDataSizeByGas, maxReturnDataWordsByGas]
 
 set_option maxRecDepth 65536 in
 lemma precompile_dispatch_output_size_le_maxReturnDataSizeByGas_or_calldata

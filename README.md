@@ -15,7 +15,7 @@ upstream project, see
 [nethermind-changes.md](nethermind-changes.md).
 
 # Requirements
-- Python packages: typing-extensions, pycryptodome, eth-typing, py-ecc
+- Python packages: typing-extensions, pycryptodome
 
 # Project structure
 
@@ -86,15 +86,13 @@ input format and `base ^ exponent mod modulus` on natural numbers, written to th
 length, with EIP-2565's gas. `Ξ_EXPMOD_eq` ([`Ethereum/Theory/Modexp.lean`](Ethereum/Theory/Modexp.lean))
 states the precompile in terms of it; the implementation computes by square-and-multiply.
 
-The remaining cryptographic precompiles (SNARKV and point evaluation) still use
-external implementations. Their
-Lean wrappers pass successful results through
-[`Ethereum.checkedPrecompileOutput`](Ethereum/PrecompileOutput.lean), which
-rejects outputs whose size does not match the result size prescribed for that
-precompile. This makes the return-data size proofs independent of assumptions
-about external output lengths. It does not prove that the external
-implementations compute the correct cryptographic values; conformance testing
-remains the behavioral check for those implementations.
+The pairing check (ECPAIRING, `0x08`) and the point evaluation precompile (`0x0a`) are
+EthLib's specifications ([ethereum/EthLib](https://github.com/ethereum/EthLib), pinned in
+`lake-manifest.json`): `Ξ_SNARKV` calls its `ecpairing` and `Ξ_PointEval` its
+`pointEvaluation`. [`Ethereum/Theory/SNARKV.lean`](Ethereum/Theory/SNARKV.lean) and
+[`Ethereum/Theory/PointEval.lean`](Ethereum/Theory/PointEval.lean) state their gas and output
+in terms of EthLib's decoders, pairing check and KZG check. EthLib proves properties of those
+definitions (its `SOUNDNESS.md`); EVMLean's theorems use only the definitions.
 
 ## Conformance testing
 A git submodule with EVM conformance tests is in:
