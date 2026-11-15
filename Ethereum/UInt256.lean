@@ -489,7 +489,7 @@ lemma zeroPadBytes_len (h : bs.length ≤ n) : (zeroPadBytes n bs).length = n :=
 
 -- | Appending a bunch of zeroes to a little-endian list of bytes doesn't change its value.
 @[simp]
-private lemma extend_bytes_zero : fromBytes' (bs ++ List.replicate n 0) = fromBytes' bs := by
+lemma extend_bytes_zero : fromBytes' (bs ++ List.replicate n 0) = fromBytes' bs := by
   induction bs with
   | nil =>
     simp [fromBytes']
@@ -504,7 +504,7 @@ private lemma fromBytes'_zeroPadBytes_32_eq : fromBytes' (zeroPadBytes 32 bs) = 
 
 -- | Casting a natural number to a list of bytes and back is the identity.
 @[simp]
-private lemma fromBytes'_toBytes' {x : ℕ} : fromBytes' (toBytes' x) = x := by
+lemma fromBytes'_toBytes' {x : ℕ} : fromBytes' (toBytes' x) = x := by
   match x with
   | .zero => simp [toBytes', fromBytes']
   | .succ n =>

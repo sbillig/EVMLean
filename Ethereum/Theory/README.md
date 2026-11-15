@@ -38,6 +38,9 @@ component.
   SHA-256, BLAKE2 F, ECADD and ECMUL precompiles in terms of their Lean
   definitions and the specifications in `Ethereum/BN254/Spec.lean`.
 
+- [`Modexp.lean`](Modexp.lean) states the MODEXP precompile `Ξ_EXPMOD` in terms of the
+  specification of EIP-198 and EIP-2565 in `Ethereum/Modexp/Spec.lean`.
+
 - [`AccountLocality.lean`](AccountLocality.lean) develops relations describing
   which changes to an account are consistent with EVM execution and carries
   them through steps, calls, and contract creation. **The intended locality
