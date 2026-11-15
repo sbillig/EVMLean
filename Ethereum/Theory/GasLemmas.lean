@@ -38,6 +38,19 @@ lemma Ccall_pos (t r val g σ μ A) : 0 < Ccall t r val g σ μ A := by
   have h := Cextra_pos t r val σ A
   omega
 
+/-- The value-zero test in `Ccallgas`, as a plain `if`. The same statement holds on Lean 4.29,
+where the match used the pattern `⟨0⟩` instead of `⟨⟨0, _⟩⟩`. -/
+theorem Ccallgas_eq (t r : AccountAddress) (val g : UInt256) (σ : AccountMap) (μ : MachineState)
+    (A : Substate) :
+    Ccallgas t r val g σ μ A =
+      if val = ⟨0⟩ then Cgascap t r val g σ μ A
+      else Cgascap t r val g σ μ A + GasConstants.Gcallstipend := by
+  rcases val with ⟨⟨_ | k, hn⟩⟩
+  · rfl
+  · have hne : (⟨⟨k + 1, hn⟩⟩ : UInt256) ≠ ⟨0⟩ := fun h => by cases h
+    rw [ite_eq_right hne]
+    rfl
+
 lemma Ccallgas_lt_Ccall (t r val g σ μ A) :
     Ccallgas t r val g σ μ A < Ccall t r val g σ μ A := by
   by_cases hval : val = (⟨0⟩ : UInt256)
